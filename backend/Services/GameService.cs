@@ -18,12 +18,12 @@ public class GameService
             [BonusKind.Pair] = 1.5m,
             [BonusKind.TwoPair] = 3m,
             [BonusKind.ThreeOfAKind] = 10m,
-            [BonusKind.Straight] = 15m,
-            [BonusKind.Flush] = 20m,
-            [BonusKind.FullHouse] = 50m,
-            [BonusKind.FourOfAKind] = 100m,
-            [BonusKind.StraightFlush] = 100m,
-            [BonusKind.RoyalFlush] = 100m,
+            [BonusKind.Straight] = 10m,
+            [BonusKind.Flush] = 15m,
+            [BonusKind.FullHouse] = 25m,
+            [BonusKind.FourOfAKind] = 50m,
+            [BonusKind.StraightFlush] = 50m,
+            [BonusKind.RoyalFlush] = 50m,
         };
 
     private readonly ConcurrentDictionary<string, GameSession> _sessions = new();
