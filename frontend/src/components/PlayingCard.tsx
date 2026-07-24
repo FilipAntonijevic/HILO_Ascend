@@ -1,38 +1,153 @@
-import { motion } from 'framer-motion';
 import { isRed, rankLabel, suitSymbol, type Card } from '../api';
 
 interface PlayingCardProps {
   card: Card;
   index: number;
-  stacked: boolean;
   highlight?: 'straight' | 'flush' | 'straightFlush' | null;
-  isNew?: boolean;
 }
 
-export function PlayingCard({ card, index, stacked, highlight, isNew }: PlayingCardProps) {
+type PipSlot = { x: number; y: number; flip?: boolean };
+
+function pipLayout(rank: number): PipSlot[] {
+  const L = 28;
+  const R = 72;
+  const C = 50;
+  const T = 14;
+  const T2 = 28;
+  const M = 50;
+  const B2 = 72;
+  const B = 86;
+
+  switch (rank) {
+    case 1:
+      return [{ x: C, y: M }];
+    case 2:
+      return [
+        { x: C, y: T },
+        { x: C, y: B, flip: true },
+      ];
+    case 3:
+      return [
+        { x: C, y: T },
+        { x: C, y: M },
+        { x: C, y: B, flip: true },
+      ];
+    case 4:
+      return [
+        { x: L, y: T },
+        { x: R, y: T },
+        { x: L, y: B, flip: true },
+        { x: R, y: B, flip: true },
+      ];
+    case 5:
+      return [
+        { x: L, y: T },
+        { x: R, y: T },
+        { x: C, y: M },
+        { x: L, y: B, flip: true },
+        { x: R, y: B, flip: true },
+      ];
+    case 6:
+      return [
+        { x: L, y: T },
+        { x: R, y: T },
+        { x: L, y: M },
+        { x: R, y: M },
+        { x: L, y: B, flip: true },
+        { x: R, y: B, flip: true },
+      ];
+    case 7:
+      return [
+        { x: L, y: T },
+        { x: R, y: T },
+        { x: C, y: T2 },
+        { x: L, y: M },
+        { x: R, y: M },
+        { x: L, y: B, flip: true },
+        { x: R, y: B, flip: true },
+      ];
+    case 8:
+      return [
+        { x: L, y: T },
+        { x: R, y: T },
+        { x: C, y: T2 },
+        { x: L, y: M },
+        { x: R, y: M },
+        { x: C, y: B2, flip: true },
+        { x: L, y: B, flip: true },
+        { x: R, y: B, flip: true },
+      ];
+    case 9:
+      return [
+        { x: L, y: T },
+        { x: R, y: T },
+        { x: L, y: T2 + 4 },
+        { x: R, y: T2 + 4 },
+        { x: C, y: M },
+        { x: L, y: B2 - 4, flip: true },
+        { x: R, y: B2 - 4, flip: true },
+        { x: L, y: B, flip: true },
+        { x: R, y: B, flip: true },
+      ];
+    case 10:
+      return [
+        { x: L, y: T },
+        { x: R, y: T },
+        { x: C, y: 22 },
+        { x: L, y: T2 + 6 },
+        { x: R, y: T2 + 6 },
+        { x: L, y: B2 - 6, flip: true },
+        { x: R, y: B2 - 6, flip: true },
+        { x: C, y: 78, flip: true },
+        { x: L, y: B, flip: true },
+        { x: R, y: B, flip: true },
+      ];
+    default:
+      return [];
+  }
+}
+
+export function PlayingCard({ card, index, highlight }: PlayingCardProps) {
   const red = isRed(card.suit);
+  const color = red ? 'red' : 'black';
   const label = card.rankLabel || rankLabel(card.rank);
   const symbol = card.suitSymbol || suitSymbol(card.suit);
+  const isFace = card.rank >= 11;
+  const isAce = card.rank === 1;
+  const pips = pipLayout(card.rank);
 
   return (
-    <motion.div
-      className={`playing-card ${stacked ? 'stacked' : 'spread'} ${highlight ? `hl-${highlight}` : ''}`}
-      style={{ zIndex: index + 1, ['--i' as string]: index }}
-      initial={isNew ? { rotateY: -90, opacity: 0, x: 40 } : false}
-      animate={{ rotateY: 0, opacity: 1, x: 0 }}
-      transition={{ type: 'spring', stiffness: 260, damping: 22, delay: isNew ? 0.05 : 0 }}
-    >
-      <div className="card-face">
-        <div className={`card-corner top ${red ? 'red' : 'black'}`}>
-          <span>{label}</span>
-          <span>{symbol}</span>
+    <div className={`playing-card ${highlight ? `hl-${highlight}` : ''}`} style={{ zIndex: index + 1 }}>
+      <div className={`card-face ${color}`}>
+        <div className="card-corner top">
+          <span className="corner-rank">{label}</span>
+          <span className="corner-suit">{symbol}</span>
         </div>
-        <div className={`card-pip ${red ? 'red' : 'black'}`}>{symbol}</div>
-        <div className={`card-corner bottom ${red ? 'red' : 'black'}`}>
-          <span>{label}</span>
-          <span>{symbol}</span>
+
+        {isFace ? (
+          <div className="card-court">
+            <span className="court-letter">{label}</span>
+            <span className="court-suit">{symbol}</span>
+          </div>
+        ) : (
+          <div className={`card-pips ${isAce ? 'ace' : ''}`}>
+            {pips.map((pip, i) => (
+              <span
+                key={i}
+                className={`pip ${pip.flip ? 'flip' : ''}`}
+                style={{ left: `${pip.x}%`, top: `${pip.y}%` }}
+              >
+                {symbol}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <div className="card-corner bottom">
+          <span className="corner-rank">{label}</span>
+          <span className="corner-suit">{symbol}</span>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

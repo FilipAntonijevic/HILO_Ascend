@@ -7,21 +7,23 @@ public class GameService
 {
     public const int MaxCards = 8;
 
-    /// <summary>m1…m7 applied after each successful Higher/Lower.</summary>
+    /// <summary>Fixed round multipliers m1…m7.</summary>
+    // Same accelerating curve as before, juice-scaled so 65%-threshold
+    // strategy ROI ≈ 90% without bonuses (product ≈ 10.94).
     public static readonly decimal[] RoundMult =
-        [1.45m, 1.55m, 1.70m, 1.95m, 2.30m, 2.90m, 4.00m];
+        [1.1515m, 1.2189m, 1.3014m, 1.3968m, 1.5036m, 1.6232m, 1.7573m];
 
-    /// <summary>f1…f8 for flush lengths 3…10 (we use up to length 8 → f6).</summary>
+    /// <summary>f1…f8 for flush lengths 3…10: 1.2, 1.3, … (+0.1 each).</summary>
     public static readonly decimal[] FlushMult =
-        [1.25m, 1.55m, 2.10m, 3.00m, 4.50m, 7.00m, 12.00m, 20.00m];
+        [1.2m, 1.3m, 1.4m, 1.5m, 1.6m, 1.7m, 1.8m, 1.9m];
 
-    /// <summary>s1…s8 for straight lengths 3…10.</summary>
+    /// <summary>s1…s8 for straight lengths 3…10: same ladder as flush.</summary>
     public static readonly decimal[] StraightMult =
-        [1.35m, 1.75m, 2.40m, 3.50m, 5.50m, 9.00m, 16.00m, 28.00m];
+        [1.2m, 1.3m, 1.4m, 1.5m, 1.6m, 1.7m, 1.8m, 1.9m];
 
-    /// <summary>sf1…sf8 — straight flush (both colors in UI).</summary>
+    /// <summary>Straight flush = flush × straight (no extra mult).</summary>
     public static readonly decimal[] StraightFlushMult =
-        [2.20m, 3.80m, 7.00m, 14.00m, 28.00m, 55.00m, 100.00m, 200.00m];
+        [1.44m, 1.69m, 1.96m, 2.25m, 2.56m, 2.89m, 3.24m, 3.61m];
 
     private readonly ConcurrentDictionary<string, GameSession> _sessions = new();
 
@@ -109,6 +111,7 @@ public class GameService
         {
             session.Pot = Math.Round(session.Pot * bonus.Multiplier, 2);
             session.CurrentMultiplier = Math.Round(session.CurrentMultiplier * bonus.Multiplier, 4);
+            session.HadBonus = true;
         }
 
         if (session.Cards.Count >= MaxCards)
@@ -181,8 +184,9 @@ public class GameService
 
     private static Card Draw(GameSession session)
     {
+        // Single 52-card deck per round; reshuffled only on Start.
         if (session.Deck.Count == 0)
-            session.Deck = BuildShuffledDeck();
+            throw new InvalidOperationException("Deck exhausted.");
         var card = session.Deck[0];
         session.Deck.RemoveAt(0);
         return card;
@@ -190,6 +194,7 @@ public class GameService
 
     /// <summary>
     /// Detect flush / straight / straight-flush on consecutive cards.
+    /// Ace is always low (A-2-3 counts; Q-K-A does not).
     /// Straight flush segments get SF mult; a longer plain straight beyond SF
     /// still counts (e.g. 1234♥ + 5♠ → SF4 + S5).
     /// </summary>
@@ -253,14 +258,8 @@ public class GameService
 
     private static int LongestStraight(IReadOnlyList<Card> cards)
     {
-        var best = 1;
-        // Try both Ace-high and Ace-low encodings for each window
-        var valuesHigh = cards.Select(c => c.CompareValue).ToArray();
-        var valuesLow = cards.Select(c => c.Rank).ToArray(); // Ace = 1
-
-        best = Math.Max(best, LongestMonotonicRun(valuesHigh));
-        best = Math.Max(best, LongestMonotonicRun(valuesLow));
-        return best;
+        var values = cards.Select(c => c.Rank).ToArray();
+        return LongestMonotonicRun(values);
     }
 
     private static int LongestMonotonicRun(int[] values)
@@ -282,23 +281,16 @@ public class GameService
     private static int LongestStraightFlush(IReadOnlyList<Card> cards)
     {
         var best = 1;
-        // Walk consecutive same-suit segments and measure straight length inside
         var i = 0;
         while (i < cards.Count)
         {
             var j = i + 1;
             while (j < cards.Count && cards[j].Suit == cards[i].Suit) j++;
             var segment = cards.Skip(i).Take(j - i).ToList();
-            if (segment.Count >= 3)
+            if (segment.Count >= 2)
             {
-                var high = segment.Select(c => c.CompareValue).ToArray();
-                var low = segment.Select(c => c.Rank).ToArray();
-                best = Math.Max(best, LongestMonotonicRun(high));
-                best = Math.Max(best, LongestMonotonicRun(low));
-            }
-            else if (segment.Count > best)
-            {
-                best = Math.Max(best, segment.Count);
+                var ranks = segment.Select(c => c.Rank).ToArray();
+                best = Math.Max(best, LongestMonotonicRun(ranks));
             }
             i = j;
         }
@@ -318,6 +310,7 @@ public class GameService
         public List<BonusHit> LastBonuses { get; set; } = [];
         public List<BonusHit> ActiveBonuses { get; set; } = [];
         public int SuccessfulGuesses { get; set; }
+        public bool HadBonus { get; set; }
         public string? Message { get; set; }
 
         public void ResetRound()
@@ -330,22 +323,49 @@ public class GameService
             LastBonuses = [];
             ActiveBonuses = [];
             SuccessfulGuesses = 0;
+            HadBonus = false;
             Message = null;
         }
 
-        public GameState ToState() => new()
+        public GameState ToState()
         {
-            SessionId = SessionId,
-            Balance = Balance,
-            Bet = Bet,
-            Pot = Pot,
-            CurrentMultiplier = CurrentMultiplier,
-            Phase = Phase,
-            Cards = Cards.ToList(),
-            LastBonuses = LastBonuses.ToList(),
-            ActiveBonuses = ActiveBonuses.ToList(),
-            SuccessfulGuesses = SuccessfulGuesses,
-            Message = Message
-        };
+            double? higher = null;
+            double? lower = null;
+            if (Phase is GamePhase.Playing or GamePhase.CanCashOut
+                && Cards.Count > 0
+                && Cards.Count < MaxCards
+                && Deck.Count > 0)
+            {
+                var current = Cards[^1];
+                var h = 0;
+                var l = 0;
+                foreach (var c in Deck)
+                {
+                    if (c.Rank > current.Rank) h++;
+                    else if (c.Rank < current.Rank) l++;
+                }
+
+                var rem = Deck.Count;
+                higher = (double)h / rem;
+                lower = (double)l / rem;
+            }
+
+            return new GameState
+            {
+                SessionId = SessionId,
+                Balance = Balance,
+                Bet = Bet,
+                Pot = Pot,
+                CurrentMultiplier = CurrentMultiplier,
+                Phase = Phase,
+                Cards = Cards.ToList(),
+                LastBonuses = LastBonuses.ToList(),
+                ActiveBonuses = ActiveBonuses.ToList(),
+                SuccessfulGuesses = SuccessfulGuesses,
+                Message = Message,
+                HigherProbability = higher,
+                LowerProbability = lower
+            };
+        }
     }
 }

@@ -8,10 +8,10 @@ public enum Suit
     Spades = 3
 }
 
-/// <summary>Rank 1 = Ace … 13 = King. Ace is high (14) for Higher/Lower comparisons.</summary>
+/// <summary>Rank 1 = Ace (lowest) … 13 = King (highest).</summary>
 public record Card(int Rank, Suit Suit)
 {
-    public int CompareValue => Rank == 1 ? 14 : Rank;
+    public int CompareValue => Rank;
 
     public string RankLabel => Rank switch
     {
@@ -79,6 +79,10 @@ public class GameState
     public List<BonusHit> ActiveBonuses { get; set; } = [];
     public int SuccessfulGuesses { get; set; }
     public string? Message { get; set; }
+    /// <summary>P(next &gt; current) from remaining deck, or null if not guessing.</summary>
+    public double? HigherProbability { get; set; }
+    /// <summary>P(next &lt; current) from remaining deck, or null if not guessing.</summary>
+    public double? LowerProbability { get; set; }
     public const int MaxCards = 8;
 }
 
