@@ -1,6 +1,6 @@
 import { PlayingCard } from './PlayingCard';
 import { CardBack, DealingCard, FlippingCard } from './CardBack';
-import type { BonusHit, Card } from '../api';
+import type { BonusHit, BonusKind, Card } from '../api';
 
 interface CardSlotsProps {
   cards: Card[];
@@ -14,6 +14,18 @@ interface CardSlotsProps {
 
 type Highlight = 'straight' | 'flush' | 'straightFlush' | 'pair' | null;
 
+const KIND_BY_TIER: Record<number, BonusKind> = {
+  1: 'Pair',
+  2: 'TwoPair',
+  3: 'ThreeOfAKind',
+  4: 'Straight',
+  5: 'Flush',
+  6: 'FullHouse',
+  7: 'FourOfAKind',
+  8: 'StraightFlush',
+  9: 'RoyalFlush',
+};
+
 const HAND_HIGHLIGHT: Record<string, Highlight> = {
   Pair: 'pair',
   TwoPair: 'pair',
@@ -25,6 +37,31 @@ const HAND_HIGHLIGHT: Record<string, Highlight> = {
   StraightFlush: 'straightFlush',
   RoyalFlush: 'straightFlush',
 };
+
+/** Stronger hand → much faster jiggle (Pair ~520ms … Royal ~85ms). */
+function bounceDurationMs(tier: number): number {
+  const t = Math.min(Math.max(tier, 1), 9);
+  return Math.round(520 * Math.pow(0.78, t - 1));
+}
+
+function bounceAmpPx(tier: number): number {
+  const t = Math.min(Math.max(tier, 1), 9);
+  return 3 + Math.floor((t - 1) * 0.35); // 3px … ~6px
+}
+
+function normalizeKind(kind: BonusHit['kind'] | number): BonusKind | null {
+  if (typeof kind === 'number') return KIND_BY_TIER[kind] ?? null;
+  if (typeof kind === 'string' && kind in HAND_HIGHLIGHT) return kind as BonusKind;
+  return null;
+}
+
+function readIndexes(hand: BonusHit): number[] {
+  const raw =
+    hand.cardIndexes ??
+    (hand as BonusHit & { CardIndexes?: number[] }).CardIndexes ??
+    [];
+  return Array.isArray(raw) ? raw.map((n) => Number(n)).filter((n) => Number.isFinite(n)) : [];
+}
 
 function slotMultLabel(index: number, roundMultipliers: number[]): string {
   if (index === 0) return '—';
@@ -38,12 +75,6 @@ function formatBonusMult(m: number): string {
   return `×${Number(m.toFixed(2))}`;
 }
 
-/** Longer / stronger hand → faster bounce. Tier 1→~420ms, tier 9→~140ms. */
-function bounceDurationMs(tier: number): number {
-  const t = Math.min(Math.max(tier, 1), 9);
-  return Math.round(420 - (t - 1) * 35);
-}
-
 export function CardSlots({
   cards,
   activeBonuses,
@@ -53,22 +84,21 @@ export function CardSlots({
   pendingSlot,
   showNextSlot,
 }: CardSlotsProps) {
-  const hand = activeBonuses[0] ?? null;
-  const hot = new Set(hand?.cardIndexes ?? []);
-  const hlKind = hand ? (HAND_HIGHLIGHT[hand.kind] ?? 'pair') : null;
-  const bounceMs = hand ? bounceDurationMs(hand.tier) : undefined;
+  const raw = activeBonuses[0] ?? null;
+  const kind = raw ? normalizeKind(raw.kind as BonusHit['kind'] | number) : null;
+  const indexes = raw ? readIndexes(raw) : [];
+  const tier = raw?.tier ?? (kind ? Object.entries(KIND_BY_TIER).find(([, k]) => k === kind)?.[0] : 0);
+  const tierNum = Number(tier) || 1;
+  const hot = new Set(indexes);
+  const hlKind = kind ? (HAND_HIGHLIGHT[kind] ?? 'pair') : null;
+  const bounceMs = kind && indexes.length > 0 ? bounceDurationMs(tierNum) : undefined;
+  const bounceAmp = kind && indexes.length > 0 ? bounceAmpPx(tierNum) : 3;
   const nextIndex = cards.length;
   const showPending = pendingSlot === 0 && cards.length === 0;
   const itemCount = showPending ? 1 : cards.length + (showNextSlot ? 1 : 0);
 
-  const captionLeft =
-    hand && hand.cardIndexes.length > 0
-      ? Math.min(...hand.cardIndexes)
-      : 0;
-  const captionRight =
-    hand && hand.cardIndexes.length > 0
-      ? Math.max(...hand.cardIndexes)
-      : 0;
+  const captionLeft = indexes.length > 0 ? Math.min(...indexes) : 0;
+  const captionRight = indexes.length > 0 ? Math.max(...indexes) : 0;
 
   return (
     <div
@@ -87,25 +117,28 @@ export function CardSlots({
             {cards.map((card, i) => {
               const inHand = hot.has(i);
               return (
-                <div key={i} className="cascade-item filled" style={{ zIndex: i + 1 }}>
+                <div
+                  key={i}
+                  className={`cascade-item filled ${inHand ? 'hand-hot' : ''}`}
+                  style={{
+                    zIndex: i + 1,
+                    ...(inHand && bounceMs
+                      ? {
+                          ['--bounce-ms' as string]: `${bounceMs}ms`,
+                          ['--bounce-amp' as string]: `${bounceAmp}px`,
+                          ['--bounce-delay' as string]: `${(i % 3) * 28}ms`,
+                        }
+                      : null),
+                  }}
+                >
                   <div className="slot-frame">
                     {newCardIndex === i && i > 0 ? (
                       <DealingCard isNew>
-                        <PlayingCard
-                          card={card}
-                          index={i}
-                          highlight={inHand ? hlKind : null}
-                          bounceMs={inHand ? bounceMs : undefined}
-                        />
+                        <PlayingCard card={card} index={i} highlight={inHand ? hlKind : null} />
                       </DealingCard>
                     ) : (
                       <FlippingCard isNew={newCardIndex === i}>
-                        <PlayingCard
-                          card={card}
-                          index={i}
-                          highlight={inHand ? hlKind : null}
-                          bounceMs={inHand ? bounceMs : undefined}
-                        />
+                        <PlayingCard card={card} index={i} highlight={inHand ? hlKind : null} />
                       </FlippingCard>
                     )}
                   </div>
@@ -128,16 +161,16 @@ export function CardSlots({
         )}
       </div>
 
-      {hand && (
+      {kind && indexes.length > 0 && raw && (
         <div className="bonus-captions cascade-bonuses" aria-live="polite">
           <div
-            className={`bonus-caption bonus-caption-${hand.kind}`}
+            className={`bonus-caption bonus-caption-${kind}`}
             style={{
               left: `calc(${captionLeft} * var(--card-w) * 0.5)`,
               width: `calc(${captionRight - captionLeft} * var(--card-w) * 0.5 + var(--card-w))`,
             }}
           >
-            {formatBonusMult(hand.multiplier)}
+            {formatBonusMult(raw.multiplier)}
           </div>
         </div>
       )}

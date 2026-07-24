@@ -270,6 +270,32 @@ body {
   overflow: visible;
 }
 
+.cascade-item.hand-hot {
+  animation: hand-hot-jiggle var(--bounce-ms, 400ms) ease-in-out infinite;
+  animation-delay: var(--bounce-delay, 0ms);
+  will-change: transform;
+  z-index: 20 !important;
+}
+
+@keyframes hand-hot-jiggle {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(calc(-1 * var(--bounce-amp, 3px)));
+  }
+  75% {
+    transform: translateY(var(--bounce-amp, 3px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cascade-item.hand-hot {
+    animation: none;
+  }
+}
+
 .cascade-item + .cascade-item {
   margin-left: calc(var(--card-w) * -1 * var(--overlap, 0.5));
 }
