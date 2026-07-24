@@ -130,7 +130,7 @@ export default function App() {
     <div className={`app-shell ${mobile ? 'mobile' : 'desktop'}`}>
       <header className="top-brand">
         <h1 className="brand">HILO Ascend</h1>
-        <p className="tagline">Same or higher / same or lower — climb to seven.</p>
+        <p className="tagline">Strict higher or lower — climb to seven.</p>
       </header>
 
       <div className="balance-banner">
@@ -206,11 +206,11 @@ export default function App() {
         {canGuess && (
           <div className="action-bar">
             <button type="button" className="btn lower" disabled={busy} onClick={() => void onGuess('Lower')}>
-              Same or Lower
+              Lower
               <small>{formatProb(state?.lowerProbability)}</small>
             </button>
             <button type="button" className="btn higher" disabled={busy} onClick={() => void onGuess('Higher')}>
-              Same or Higher
+              Higher
               <small>{formatProb(state?.higherProbability)}</small>
             </button>
             <button
