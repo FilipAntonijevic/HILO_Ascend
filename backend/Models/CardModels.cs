@@ -83,7 +83,7 @@ public class GameState
     public double? HigherProbability { get; set; }
     /// <summary>P(next &lt; current) from remaining deck, or null if not guessing.</summary>
     public double? LowerProbability { get; set; }
-    public const int MaxCards = 8;
+    public const int MaxCards = 7;
 }
 
 public record SetBalanceRequest(decimal Balance);

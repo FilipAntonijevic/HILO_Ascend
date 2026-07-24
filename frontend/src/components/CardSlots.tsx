@@ -181,7 +181,7 @@ export function CardSlots({
   activeBonuses,
   newCardIndex,
   roundMultipliers,
-  maxCards = 8,
+  maxCards = 7,
   pendingSlot,
   showNextSlot,
 }: CardSlotsProps) {

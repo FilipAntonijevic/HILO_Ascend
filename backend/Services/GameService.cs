@@ -5,11 +5,11 @@ namespace HILO.Api.Services;
 
 public class GameService
 {
-    public const int MaxCards = 8;
+    public const int MaxCards = 7;
 
-    /// <summary>Fixed round multipliers m1…m7 (cards 2…8). Last step jumps to ×2.</summary>
+    /// <summary>Fixed round multipliers m1…m6 (cards 2…7). Last step jumps to ×2.</summary>
     public static readonly decimal[] RoundMult =
-        [1.1m, 1.2m, 1.3m, 1.4m, 1.5m, 1.6m, 2.0m];
+        [1.1m, 1.2m, 1.3m, 1.4m, 1.5m, 2.0m];
 
     /// <summary>f1…f8 for flush lengths 3…10: 1.5, 3, 4.5, … (+1.5 each).</summary>
     public static readonly decimal[] FlushMult =
