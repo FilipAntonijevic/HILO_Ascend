@@ -6,15 +6,27 @@ interface BonusOverlayProps {
 }
 
 const kindClass: Record<string, string> = {
+  Pair: 'bonus-pair',
+  TwoPair: 'bonus-two-pair',
+  ThreeOfAKind: 'bonus-trips',
   Straight: 'bonus-straight',
   Flush: 'bonus-flush',
+  FullHouse: 'bonus-full-house',
+  FourOfAKind: 'bonus-quads',
   StraightFlush: 'bonus-straight-flush',
+  RoyalFlush: 'bonus-royal',
 };
 
 const kindLabel: Record<string, string> = {
+  Pair: 'PAIR',
+  TwoPair: 'TWO PAIR',
+  ThreeOfAKind: 'THREE OF A KIND',
   Straight: 'STRAIGHT',
   Flush: 'FLUSH',
+  FullHouse: 'FULL HOUSE',
+  FourOfAKind: 'POKER',
   StraightFlush: 'STRAIGHT FLUSH',
+  RoyalFlush: 'ROYAL FLUSH',
 };
 
 export function BonusOverlay({ bonuses }: BonusOverlayProps) {
@@ -23,7 +35,7 @@ export function BonusOverlay({ bonuses }: BonusOverlayProps) {
       <AnimatePresence>
         {bonuses.map((b) => (
           <motion.div
-            key={`${b.kind}-${b.length}-${b.tier}`}
+            key={`${b.kind}-${b.tier}-${b.multiplier}`}
             className={`bonus-toast ${kindClass[b.kind] ?? ''}`}
             initial={{ opacity: 0, scale: 0.6, y: 24 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -36,10 +48,8 @@ export function BonusOverlay({ bonuses }: BonusOverlayProps) {
               transition={{ duration: 1.2, ease: 'easeOut' }}
             />
             <div className="bonus-text">
-              <span className="bonus-kind">
-                {kindLabel[b.kind]} {b.length}
-              </span>
-              <span className="bonus-mult">×{b.multiplier.toFixed(2)}</span>
+              <span className="bonus-kind">{kindLabel[b.kind] ?? b.kind}</span>
+              <span className="bonus-mult">×{b.multiplier}</span>
             </div>
           </motion.div>
         ))}

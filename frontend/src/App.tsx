@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, type GameConfig, type GameState } from './api';
 import { BonusOverlay } from './components/BonusOverlay';
 import { CardSlots } from './components/CardSlots';
+import { sfx, unlockAudio } from './sounds';
 import './App.css';
 
 function useIsMobile(breakpoint = 768) {
@@ -73,10 +74,15 @@ export default function App() {
     setBalanceInput(String(next.balance));
     if (animateCard && next.cards.length > 0) {
       setNewCardIndex(next.cards.length - 1);
-      window.setTimeout(() => setNewCardIndex(null), 700);
+      window.setTimeout(() => setNewCardIndex(null), 900);
+      window.setTimeout(() => sfx.cardFlip(), 40);
     }
-    if (next.lastBonuses?.length) {
+    if (next.phase === 'Lost') {
+      setFlashBonuses([]);
+      sfx.bust();
+    } else if (next.lastBonuses?.length) {
       setFlashBonuses(next.lastBonuses);
+      window.setTimeout(() => sfx.bonus(), animateCard ? 220 : 40);
     }
   }
 
@@ -92,6 +98,8 @@ export default function App() {
   }
 
   async function onStart() {
+    unlockAudio();
+    sfx.click();
     const bet = Number(betInput);
     if (!Number.isFinite(bet) || bet <= 0) {
       setError('Enter a valid bet.');
@@ -105,27 +113,36 @@ export default function App() {
   }
 
   async function onGuess(guess: 'Higher' | 'Lower') {
+    unlockAudio();
+    sfx.click();
     await run(() => api.guess(guess), (s) => applyState(s, true));
   }
 
   async function onCashOut() {
-    await run(() => api.cashOut(), (s) => applyState(s, false));
+    unlockAudio();
+    sfx.click();
+    await run(() => api.cashOut(), (s) => {
+      applyState(s, false);
+      sfx.cashOut();
+    });
   }
 
   const sessionMult = state?.currentMultiplier ?? 1;
   const sessionReturn = state?.pot ?? 0;
   const cardCount = state?.cards.length ?? 0;
-  const maxCards = config?.maxCards ?? 8;
+  const maxCards = config?.maxCards ?? 7;
   const roundMults = config?.roundMultipliers ?? [];
 
   /** Face-down only while waiting for the first Start. */
   const pendingSlot = canStart && cardCount === 0 ? 0 : null;
+  /** Only the next empty seat (to the right), hidden while a new card is sliding in. */
+  const showNextSlot = inRound && cardCount > 0 && cardCount < maxCards && newCardIndex === null;
 
   return (
     <div className={`app-shell ${mobile ? 'mobile' : 'desktop'}`}>
       <header className="top-brand">
         <h1 className="brand">HILO Ascend</h1>
-        <p className="tagline">Strict higher or lower — climb to eight.</p>
+        <p className="tagline">Strict higher or lower — climb to seven.</p>
       </header>
 
       <div className="balance-banner">
@@ -160,6 +177,7 @@ export default function App() {
           roundMultipliers={roundMults}
           maxCards={maxCards}
           pendingSlot={pendingSlot}
+          showNextSlot={showNextSlot}
         />
         {state?.message && inRound && <p className="table-msg">{state.message}</p>}
         {error && <p className="error-msg">{error}</p>}

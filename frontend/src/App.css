@@ -198,7 +198,7 @@ body {
   padding: 0.55rem 1.5rem 0.85rem;
   overflow: hidden;
   min-height: 0;
-  height: calc((var(--card-h) + 5.2rem) * 2);
+  height: calc(var(--card-h) + 6.5rem);
   flex: 0 0 auto;
 }
 
@@ -245,15 +245,63 @@ body {
   flex-direction: column;
   gap: 0.45rem;
   width: 100%;
+  align-items: center;
 }
 
-.card-slots {
-  display: grid;
-  grid-template-columns: repeat(var(--slots, 8), minmax(0, 1fr));
-  gap: 0.45rem;
-  width: 100%;
-  align-items: end;
+.cascade-board {
+  --overlap: 0.5;
+}
+
+.card-cascade {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: center;
+  width: max-content;
+  max-width: 100%;
   perspective: 1000px;
+  overflow: visible;
+}
+
+.cascade-item {
+  flex: 0 0 var(--card-w);
+  width: var(--card-w);
+  position: relative;
+  overflow: visible;
+}
+
+.cascade-item.hand-hot {
+  animation: hand-hot-jiggle var(--bounce-ms, 400ms) ease-in-out infinite;
+  animation-delay: var(--bounce-delay, 0ms);
+  will-change: transform;
+}
+
+@keyframes hand-hot-jiggle {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(calc(-1 * var(--bounce-amp, 3px)));
+  }
+  75% {
+    transform: translateY(var(--bounce-amp, 3px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cascade-item.hand-hot {
+    animation: none;
+  }
+}
+
+.cascade-item + .cascade-item {
+  margin-left: calc(var(--card-w) * -1 * var(--overlap, 0.5));
+}
+
+/* Next empty seat sits fully to the right — no overlap with the last card. */
+.cascade-item.filled + .cascade-item.next {
+  margin-left: 0.4rem;
 }
 
 .bonus-captions {
@@ -263,6 +311,23 @@ body {
   width: 100%;
   min-height: 1.6rem;
   align-items: center;
+}
+
+.cascade-bonuses {
+  position: relative;
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  min-height: 1.7rem;
+  margin: 0 auto;
+  /* Match cascade footprint: first full card + half for each extra item */
+  min-width: calc(var(--card-w) * (1 + (var(--cascade-count, 1) - 1) * var(--overlap, 0.5)));
+}
+
+.cascade-bonuses .bonus-caption {
+  position: absolute;
+  top: 0;
+  justify-self: unset;
 }
 
 .bonus-caption {
@@ -277,19 +342,23 @@ body {
   white-space: nowrap;
 }
 
-.bonus-caption-flush {
+.bonus-caption-flush,
+.bonus-caption-Flush {
   color: #ffb074;
   background: rgba(240, 160, 90, 0.14);
   text-shadow: 0 0 12px rgba(240, 160, 90, 0.45);
 }
 
-.bonus-caption-straight {
+.bonus-caption-straight,
+.bonus-caption-Straight {
   color: #9fdfff;
   background: rgba(126, 200, 227, 0.14);
   text-shadow: 0 0 12px rgba(126, 200, 227, 0.45);
 }
 
-.bonus-caption-straightFlush {
+.bonus-caption-straightFlush,
+.bonus-caption-StraightFlush,
+.bonus-caption-RoyalFlush {
   background: linear-gradient(90deg, rgba(126, 200, 227, 0.18), rgba(240, 160, 90, 0.18));
   background-clip: padding-box;
   color: #fff0d6;
@@ -298,16 +367,18 @@ body {
     0 0 10px rgba(240, 160, 90, 0.55);
 }
 
-.card-slot {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.3rem;
-  min-width: 0;
+.bonus-caption-Pair,
+.bonus-caption-TwoPair,
+.bonus-caption-ThreeOfAKind,
+.bonus-caption-FullHouse,
+.bonus-caption-FourOfAKind {
+  color: #ffe08a;
+  background: rgba(232, 195, 90, 0.14);
+  text-shadow: 0 0 12px rgba(232, 195, 90, 0.45);
 }
 
 .slot-frame {
-  width: 100%;
+  width: var(--card-w);
   max-width: var(--card-w);
   height: var(--card-h);
   display: flex;
@@ -342,17 +413,17 @@ body {
   letter-spacing: 0.04em;
 }
 
-.card-slot.pending .slot-frame,
-.card-slot.next .slot-empty {
+.cascade-item.pending .slot-frame,
+.cascade-item.next .slot-empty {
   border-radius: 10px;
 }
 
-.card-slot.next .slot-empty {
+.cascade-item.next .slot-empty {
   border-color: rgba(126, 200, 227, 0.45);
   background: rgba(126, 200, 227, 0.06);
 }
 
-.card-slot.next .slot-mult-in {
+.cascade-item.next .slot-mult-in {
   color: var(--accent-2);
 }
 
@@ -541,6 +612,13 @@ body {
   color: #1a1a1a;
 }
 
+.playing-card.hl-pair .card-face {
+  box-shadow:
+    0 0 0 3px #e8c35a,
+    0 0 22px rgba(232, 195, 90, 0.55),
+    0 8px 18px rgba(0, 0, 0, 0.28);
+}
+
 .playing-card.hl-straight .card-face {
   box-shadow:
     0 0 0 3px var(--accent-2),
@@ -568,6 +646,32 @@ body {
 @keyframes sf-pulse {
   50% {
     filter: brightness(1.08);
+  }
+}
+
+/* Manic few-pixel bounce for linked bonus cards; speed via --bounce-ms. */
+.playing-card.hl-bounce {
+  animation: bonus-jiggle var(--bounce-ms, 400ms) ease-in-out infinite;
+  animation-delay: var(--bounce-delay, 0ms);
+  will-change: transform;
+}
+
+@keyframes bonus-jiggle {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(-3px);
+  }
+  75% {
+    transform: translateY(3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .playing-card.hl-bounce {
+    animation: none;
   }
 }
 
@@ -856,11 +960,48 @@ body {
   color: transparent;
 }
 
+.bonus-pair,
+.bonus-two-pair,
+.bonus-trips,
+.bonus-full-house,
+.bonus-quads {
+  background: rgba(45, 38, 12, 0.92);
+  border: 2px solid #e8c35a;
+  color: #ffe08a;
+  box-shadow: 0 0 28px rgba(232, 195, 90, 0.45);
+}
+
+.bonus-pair .bonus-ring,
+.bonus-two-pair .bonus-ring,
+.bonus-trips .bonus-ring,
+.bonus-full-house .bonus-ring,
+.bonus-quads .bonus-ring {
+  background: conic-gradient(from 0deg, transparent, #e8c35a, transparent);
+}
+
+.bonus-royal {
+  background: rgba(30, 28, 20, 0.94);
+  border: 2px solid transparent;
+  background-image:
+    linear-gradient(rgba(30, 28, 20, 0.94), rgba(30, 28, 20, 0.94)),
+    linear-gradient(120deg, #ffe08a, var(--accent-2), var(--accent));
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  color: #fff;
+  box-shadow:
+    0 0 28px rgba(255, 224, 138, 0.55),
+    0 0 28px rgba(126, 200, 227, 0.45);
+}
+
+.bonus-royal .bonus-ring {
+  background: conic-gradient(from 0deg, #ffe08a, var(--accent-2), var(--accent), #ffe08a);
+}
+
 /* —— Mobile —— */
 .app-shell.mobile {
   --page-pad: 0.75rem;
-  --card-w: 94px;
-  --card-h: 132px;
+  --card-w: 71px;
+  --card-h: 110px;
   padding: 0.75rem var(--page-pad) 0;
   max-width: 100%;
   height: 100%;
@@ -897,18 +1038,13 @@ body {
 }
 
 .app-shell.mobile .table {
-  height: calc((var(--card-h) + 4.2rem) * 2);
+  height: calc(var(--card-h) + 5.5rem);
   border-radius: 14px;
   padding: 0.45rem 0.45rem 0.7rem;
 }
 
-.app-shell.mobile .card-slots,
-.app-shell.mobile .bonus-captions {
-  gap: 0.25rem;
-}
-
 .app-shell.mobile .slot-mult-in {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
 }
 
 .app-shell.mobile .slot-mult-final {

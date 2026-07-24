@@ -5,25 +5,26 @@ namespace HILO.Api.Services;
 
 public class GameService
 {
-    public const int MaxCards = 8;
+    public const int MaxCards = 7;
 
-    /// <summary>Fixed round multipliers m1…m7.</summary>
-    // Same accelerating curve as before, juice-scaled so 65%-threshold
-    // strategy ROI ≈ 90% without bonuses (product ≈ 10.94).
+    /// <summary>Fixed round multipliers m1…m6 (cards 2…7).</summary>
     public static readonly decimal[] RoundMult =
-        [1.1515m, 1.2189m, 1.3014m, 1.3968m, 1.5036m, 1.6232m, 1.7573m];
+        [1.1m, 1.2m, 1.3m, 1.4m, 1.5m, 1.6m];
 
-    /// <summary>f1…f8 for flush lengths 3…10: 1.2, 1.3, … (+0.1 each).</summary>
-    public static readonly decimal[] FlushMult =
-        [1.2m, 1.3m, 1.4m, 1.5m, 1.6m, 1.7m, 1.8m, 1.9m];
-
-    /// <summary>s1…s8 for straight lengths 3…10: same ladder as flush.</summary>
-    public static readonly decimal[] StraightMult =
-        [1.2m, 1.3m, 1.4m, 1.5m, 1.6m, 1.7m, 1.8m, 1.9m];
-
-    /// <summary>Straight flush = flush × straight (no extra mult).</summary>
-    public static readonly decimal[] StraightFlushMult =
-        [1.44m, 1.69m, 1.96m, 2.25m, 2.56m, 2.89m, 3.24m, 3.61m];
+    /// <summary>Best 5-card poker hand multipliers (tuned for ~97% RTP at 60% hit threshold).</summary>
+    public static readonly IReadOnlyDictionary<BonusKind, decimal> HandMult =
+        new Dictionary<BonusKind, decimal>
+        {
+            [BonusKind.Pair] = 1.15m,
+            [BonusKind.TwoPair] = 1.65m,
+            [BonusKind.ThreeOfAKind] = 4m,
+            [BonusKind.Straight] = 4m,
+            [BonusKind.Flush] = 4m,
+            [BonusKind.FullHouse] = 7m,
+            [BonusKind.FourOfAKind] = 16m,
+            [BonusKind.StraightFlush] = 16m,
+            [BonusKind.RoyalFlush] = 16m,
+        };
 
     private readonly ConcurrentDictionary<string, GameSession> _sessions = new();
 
@@ -89,7 +90,8 @@ public class GameService
                 ? "Same rank — you lose. Strict Higher/Lower only."
                 : "Wrong guess — pot lost.";
             session.LastBonuses = [];
-            session.ActiveBonuses = DetectBonuses(session.Cards);
+            // Losing card must not create/show poker hand bonuses.
+            session.ActiveBonuses = DetectBonuses(session.Cards.Take(session.Cards.Count - 1).ToList());
             return session.ToState();
         }
 
@@ -102,7 +104,6 @@ public class GameService
         var bonuses = DetectBonuses(session.Cards);
         session.ActiveBonuses = bonuses;
 
-        // Apply only bonuses that are newly achieved / upgraded vs previous card count
         var previousBonuses = DetectBonuses(session.Cards.Take(session.Cards.Count - 1).ToList());
         var applied = SelectNewBonuses(previousBonuses, bonuses);
         session.LastBonuses = applied;
@@ -149,9 +150,9 @@ public class GameService
     {
         maxCards = MaxCards,
         roundMultipliers = RoundMult,
-        flushMultipliers = FlushMult,
-        straightMultipliers = StraightMult,
-        straightFlushMultipliers = StraightFlushMult
+        handMultipliers = HandMult.ToDictionary(
+            kv => kv.Key.ToString(),
+            kv => kv.Value)
     };
 
     private GameSession RequireActive(string sessionId)
@@ -172,7 +173,6 @@ public class GameService
                 deck.Add(new Card(rank, suit));
         }
 
-        // Fisher–Yates
         for (var i = deck.Count - 1; i > 0; i--)
         {
             var j = Random.Shared.Next(i + 1);
@@ -184,7 +184,6 @@ public class GameService
 
     private static Card Draw(GameSession session)
     {
-        // Single 52-card deck per round; reshuffled only on Start.
         if (session.Deck.Count == 0)
             throw new InvalidOperationException("Deck exhausted.");
         var card = session.Deck[0];
@@ -193,108 +192,164 @@ public class GameService
     }
 
     /// <summary>
-    /// Detect flush / straight / straight-flush on consecutive cards.
-    /// Ace is always low (A-2-3 counts; Q-K-A does not).
-    /// Straight flush segments get SF mult; a longer plain straight beyond SF
-    /// still counts (e.g. 1234♥ + 5♠ → SF4 + S5).
+    /// Best poker hand using up to 5 cards from the played set (Ace high).
     /// </summary>
     public static List<BonusHit> DetectBonuses(IReadOnlyList<Card> cards)
     {
-        if (cards.Count < 3) return [];
-
-        var bestSf = LongestStraightFlush(cards);
-        var bestFlush = LongestFlush(cards);
-        var bestStraight = LongestStraight(cards);
-
-        var hits = new List<BonusHit>();
-
-        if (bestSf >= 3)
-            hits.Add(MakeBonus(BonusKind.StraightFlush, bestSf, StraightFlushMult));
-
-        // Flush only if longer than any SF (otherwise SF already covers those cards)
-        if (bestFlush >= 3 && bestFlush > bestSf)
-            hits.Add(MakeBonus(BonusKind.Flush, bestFlush, FlushMult));
-
-        // Straight if longer than SF — the extra cards still count
-        if (bestStraight >= 3 && bestStraight > bestSf)
-            hits.Add(MakeBonus(BonusKind.Straight, bestStraight, StraightMult));
-        else if (bestStraight >= 3 && bestSf < 3)
-            hits.Add(MakeBonus(BonusKind.Straight, bestStraight, StraightMult));
-
-        return hits;
+        var hit = EvaluateBestHand(cards);
+        return hit is null ? [] : [hit];
     }
 
     private static List<BonusHit> SelectNewBonuses(List<BonusHit> previous, List<BonusHit> current)
     {
-        var applied = new List<BonusHit>();
-        foreach (var hit in current)
+        if (current.Count == 0) return [];
+        var next = current[0];
+        if (previous.Count == 0) return [next];
+        var prev = previous[0];
+        // Upgrade only when the hand category improves.
+        return next.Tier > prev.Tier ? [next] : [];
+    }
+
+    private static BonusHit? EvaluateBestHand(IReadOnlyList<Card> cards)
+    {
+        if (cards.Count < 2) return null;
+
+        BonusHit? best = null;
+        if (cards.Count >= 5)
         {
-            var prev = previous.FirstOrDefault(p => p.Kind == hit.Kind);
-            if (prev is null || hit.Length > prev.Length)
-                applied.Add(hit);
-        }
-        return applied;
-    }
-
-    private static BonusHit MakeBonus(BonusKind kind, int length, decimal[] table)
-    {
-        var tier = Math.Clamp(length - 2, 1, table.Length); // length 3 → tier 1
-        var mult = table[tier - 1];
-        return new BonusHit(kind, length, tier, mult);
-    }
-
-    private static int LongestFlush(IReadOnlyList<Card> cards)
-    {
-        var best = 1;
-        var run = 1;
-        for (var i = 1; i < cards.Count; i++)
-        {
-            if (cards[i].Suit == cards[i - 1].Suit) run++;
-            else run = 1;
-            best = Math.Max(best, run);
-        }
-        return best;
-    }
-
-    private static int LongestStraight(IReadOnlyList<Card> cards)
-    {
-        var values = cards.Select(c => c.Rank).ToArray();
-        return LongestMonotonicRun(values);
-    }
-
-    private static int LongestMonotonicRun(int[] values)
-    {
-        if (values.Length == 0) return 0;
-        var best = 1;
-        var up = 1;
-        var down = 1;
-        for (var i = 1; i < values.Length; i++)
-        {
-            if (values[i] == values[i - 1] + 1) { up++; down = 1; }
-            else if (values[i] == values[i - 1] - 1) { down++; up = 1; }
-            else { up = 1; down = 1; }
-            best = Math.Max(best, Math.Max(up, down));
-        }
-        return best;
-    }
-
-    private static int LongestStraightFlush(IReadOnlyList<Card> cards)
-    {
-        var best = 1;
-        var i = 0;
-        while (i < cards.Count)
-        {
-            var j = i + 1;
-            while (j < cards.Count && cards[j].Suit == cards[i].Suit) j++;
-            var segment = cards.Skip(i).Take(j - i).ToList();
-            if (segment.Count >= 2)
+            foreach (var pick in Combinations(cards.Count, 5))
             {
-                var ranks = segment.Select(c => c.Rank).ToArray();
-                best = Math.Max(best, LongestMonotonicRun(ranks));
+                var scored = ScoreFive(
+                    pick.Select(i => cards[i]).ToList(),
+                    pick.ToList());
+                if (scored is not null && (best is null || scored.Tier > best.Tier))
+                    best = scored;
             }
-            i = j;
         }
+        else
+        {
+            // Fewer than 5 cards: only pair / two pair / trips / quads possible.
+            best = ScorePartial(cards);
+        }
+
         return best;
+    }
+
+    private static BonusHit? ScorePartial(IReadOnlyList<Card> cards)
+    {
+        var indexed = cards.Select((c, i) => (c, i)).ToList();
+        var byRank = indexed.GroupBy(x => x.c.CompareValue)
+            .OrderByDescending(g => g.Count())
+            .ThenByDescending(g => g.Key)
+            .ToList();
+
+        var counts = byRank.Select(g => g.Count()).ToList();
+        if (counts[0] >= 4)
+        {
+            var idxs = byRank[0].Select(x => x.i).Take(4).ToList();
+            return Make(BonusKind.FourOfAKind, idxs);
+        }
+
+        if (counts[0] >= 3)
+        {
+            var idxs = byRank[0].Select(x => x.i).Take(3).ToList();
+            return Make(BonusKind.ThreeOfAKind, idxs);
+        }
+
+        if (counts[0] >= 2 && counts.Count > 1 && counts[1] >= 2)
+        {
+            var idxs = byRank[0].Select(x => x.i).Take(2)
+                .Concat(byRank[1].Select(x => x.i).Take(2))
+                .ToList();
+            return Make(BonusKind.TwoPair, idxs);
+        }
+
+        if (counts[0] >= 2)
+        {
+            var idxs = byRank[0].Select(x => x.i).Take(2).ToList();
+            return Make(BonusKind.Pair, idxs);
+        }
+
+        return null;
+    }
+
+    private static BonusHit? ScoreFive(IReadOnlyList<Card> five, List<int> indexes)
+    {
+        var vals = five.Select(c => c.CompareValue).OrderByDescending(v => v).ToArray();
+        var isFlush = five.All(c => c.Suit == five[0].Suit);
+        var isStraight = IsStraight(vals);
+        var isRoyal = isFlush && isStraight && vals.Contains(14) && vals.Contains(10);
+
+        var byRank = five.Select((c, i) => (c, idx: indexes[i]))
+            .GroupBy(x => x.c.CompareValue)
+            .OrderByDescending(g => g.Count())
+            .ThenByDescending(g => g.Key)
+            .ToList();
+        var counts = byRank.Select(g => g.Count()).ToArray();
+
+        // Only highlight cards that define the hand (no kickers).
+        List<int> Essential(params int[] takeCounts)
+        {
+            var list = new List<int>();
+            for (var i = 0; i < takeCounts.Length; i++)
+                list.AddRange(byRank[i].Select(x => x.idx).Take(takeCounts[i]));
+            return list;
+        }
+
+        if (isRoyal)
+            return Make(BonusKind.RoyalFlush, indexes);
+        if (isFlush && isStraight)
+            return Make(BonusKind.StraightFlush, indexes);
+        if (counts[0] == 4)
+            return Make(BonusKind.FourOfAKind, Essential(4));
+        if (counts[0] == 3 && counts.Length > 1 && counts[1] == 2)
+            return Make(BonusKind.FullHouse, Essential(3, 2));
+        if (isFlush)
+            return Make(BonusKind.Flush, indexes);
+        if (isStraight)
+            return Make(BonusKind.Straight, indexes);
+        if (counts[0] == 3)
+            return Make(BonusKind.ThreeOfAKind, Essential(3));
+        if (counts[0] == 2 && counts.Length > 1 && counts[1] == 2)
+            return Make(BonusKind.TwoPair, Essential(2, 2));
+        if (counts[0] == 2)
+            return Make(BonusKind.Pair, Essential(2));
+        return null;
+    }
+
+    /// <summary>Ace-high only: 10-J-Q-K-A yes, A-2-3-4-5 no.</summary>
+    private static bool IsStraight(int[] descendingUniqueOrNot)
+    {
+        var uniq = descendingUniqueOrNot.Distinct().OrderByDescending(v => v).ToArray();
+        if (uniq.Length != 5) return false;
+        return uniq[0] - uniq[4] == 4
+               && uniq[0] - uniq[1] == 1
+               && uniq[1] - uniq[2] == 1
+               && uniq[2] - uniq[3] == 1
+               && uniq[3] - uniq[4] == 1;
+    }
+
+    private static BonusHit Make(BonusKind kind, List<int> indexes)
+    {
+        var mult = HandMult[kind];
+        var tier = (int)kind;
+        return new BonusHit(kind, indexes.Count, tier, mult, indexes.OrderBy(i => i).ToList());
+    }
+
+    private static IEnumerable<int[]> Combinations(int n, int k)
+    {
+        var comb = new int[k];
+        for (var i = 0; i < k; i++) comb[i] = i;
+        while (true)
+        {
+            yield return (int[])comb.Clone();
+            var t = k - 1;
+            while (t >= 0 && comb[t] == n - k + t) t--;
+            if (t < 0) yield break;
+            comb[t]++;
+            for (var i = t + 1; i < k; i++)
+                comb[i] = comb[i - 1] + 1;
+        }
     }
 
     private sealed class GameSession(string sessionId)
@@ -331,7 +386,7 @@ public class GameService
         {
             double? higher = null;
             double? lower = null;
-            if (Phase is GamePhase.Playing or GamePhase.CanCashOut
+            if ((Phase is GamePhase.Playing or GamePhase.CanCashOut)
                 && Cards.Count > 0
                 && Cards.Count < MaxCards
                 && Deck.Count > 0)
@@ -341,8 +396,8 @@ public class GameService
                 var l = 0;
                 foreach (var c in Deck)
                 {
-                    if (c.Rank > current.Rank) h++;
-                    else if (c.Rank < current.Rank) l++;
+                    if (c.CompareValue > current.CompareValue) h++;
+                    else if (c.CompareValue < current.CompareValue) l++;
                 }
 
                 var rem = Deck.Count;

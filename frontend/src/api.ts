@@ -9,13 +9,23 @@ export interface Card {
   compareValue: number;
 }
 
-export type BonusKind = 'Flush' | 'Straight' | 'StraightFlush';
+export type BonusKind =
+  | 'Pair'
+  | 'TwoPair'
+  | 'ThreeOfAKind'
+  | 'Straight'
+  | 'Flush'
+  | 'FullHouse'
+  | 'FourOfAKind'
+  | 'StraightFlush'
+  | 'RoyalFlush';
 
 export interface BonusHit {
   kind: BonusKind;
   length: number;
   tier: number;
   multiplier: number;
+  cardIndexes: number[];
 }
 
 export type GamePhase =
@@ -45,9 +55,7 @@ export interface GameState {
 export interface GameConfig {
   maxCards: number;
   roundMultipliers: number[];
-  flushMultipliers: number[];
-  straightMultipliers: number[];
-  straightFlushMultipliers: number[];
+  handMultipliers: Record<string, number>;
 }
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '';

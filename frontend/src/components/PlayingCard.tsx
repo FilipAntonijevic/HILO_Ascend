@@ -3,7 +3,7 @@ import { isRed, rankLabel, suitSymbol, type Card } from '../api';
 interface PlayingCardProps {
   card: Card;
   index: number;
-  highlight?: 'straight' | 'flush' | 'straightFlush' | null;
+  highlight?: 'straight' | 'flush' | 'straightFlush' | 'pair' | null;
 }
 
 type PipSlot = { x: number; y: number; flip?: boolean };
@@ -117,7 +117,10 @@ export function PlayingCard({ card, index, highlight }: PlayingCardProps) {
   const pips = pipLayout(card.rank);
 
   return (
-    <div className={`playing-card ${highlight ? `hl-${highlight}` : ''}`} style={{ zIndex: index + 1 }}>
+    <div
+      className={`playing-card ${highlight ? `hl-${highlight}` : ''}`}
+      style={{ zIndex: index + 1 }}
+    >
       <div className={`card-face ${color}`}>
         <div className="card-corner top">
           <span className="corner-rank">{label}</span>

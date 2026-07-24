@@ -1,6 +1,6 @@
 import { PlayingCard } from './PlayingCard';
 import { CardBack, DealingCard, FlippingCard } from './CardBack';
-import type { BonusHit, Card } from '../api';
+import type { BonusHit, BonusKind, Card } from '../api';
 
 interface CardSlotsProps {
   cards: Card[];
@@ -9,136 +9,58 @@ interface CardSlotsProps {
   roundMultipliers: number[];
   maxCards?: number;
   pendingSlot: number | null;
+  showNextSlot: boolean;
 }
 
-type Highlight = 'straight' | 'flush' | 'straightFlush';
+type Highlight = 'straight' | 'flush' | 'straightFlush' | 'pair' | null;
 
-interface BonusRun {
-  kind: Highlight;
-  start: number;
-  end: number;
-  length: number;
-  multiplier: number;
+const KIND_BY_TIER: Record<number, BonusKind> = {
+  1: 'Pair',
+  2: 'TwoPair',
+  3: 'ThreeOfAKind',
+  4: 'Straight',
+  5: 'Flush',
+  6: 'FullHouse',
+  7: 'FourOfAKind',
+  8: 'StraightFlush',
+  9: 'RoyalFlush',
+};
+
+const HAND_HIGHLIGHT: Record<string, Highlight> = {
+  Pair: 'pair',
+  TwoPair: 'pair',
+  ThreeOfAKind: 'pair',
+  FullHouse: 'pair',
+  FourOfAKind: 'pair',
+  Straight: 'straight',
+  Flush: 'flush',
+  StraightFlush: 'straightFlush',
+  RoyalFlush: 'straightFlush',
+};
+
+/** Stronger hand → much faster jiggle (Pair ~520ms … Royal ~85ms). */
+function bounceDurationMs(tier: number): number {
+  const t = Math.min(Math.max(tier, 1), 9);
+  return Math.round(520 * Math.pow(0.78, t - 1));
 }
 
-function compareVal(c: Card): number {
-  return c.rank;
+function bounceAmpPx(tier: number): number {
+  const t = Math.min(Math.max(tier, 1), 9);
+  return 3 + Math.floor((t - 1) * 0.35); // 3px … ~6px
 }
 
-function flushRunContaining(cards: Card[], index: number): { start: number; end: number } {
-  const suit = cards[index].suit;
-  let left = index;
-  while (left > 0 && cards[left - 1].suit === suit) left--;
-  let right = index;
-  while (right < cards.length - 1 && cards[right + 1].suit === suit) right++;
-  return { start: left, end: right };
+function normalizeKind(kind: BonusHit['kind'] | number): BonusKind | null {
+  if (typeof kind === 'number') return KIND_BY_TIER[kind] ?? null;
+  if (typeof kind === 'string' && kind in HAND_HIGHLIGHT) return kind as BonusKind;
+  return null;
 }
 
-function straightRunContaining(
-  cards: Card[],
-  index: number,
-  sameSuit = false,
-): { start: number; end: number } {
-  const val = (c: Card) => compareVal(c);
-  let best = { start: index, end: index };
-
-  for (const dir of [1, -1] as const) {
-    let l = index;
-    let r = index;
-    while (
-      l > 0 &&
-      val(cards[l]) === val(cards[l - 1]) + dir &&
-      (!sameSuit || cards[l].suit === cards[l - 1].suit)
-    ) {
-      l--;
-    }
-    while (
-      r < cards.length - 1 &&
-      val(cards[r + 1]) === val(cards[r]) + dir &&
-      (!sameSuit || cards[r].suit === cards[r + 1].suit)
-    ) {
-      r++;
-    }
-    if (r - l > best.end - best.start) best = { start: l, end: r };
-  }
-  return best;
-}
-
-function findLongestFlushRun(cards: Card[]): { start: number; end: number; length: number } | null {
-  let best: { start: number; end: number; length: number } | null = null;
-  let i = 0;
-  while (i < cards.length) {
-    const { start, end } = flushRunContaining(cards, i);
-    const length = end - start + 1;
-    if (!best || length > best.length) best = { start, end, length };
-    i = end + 1;
-  }
-  return best;
-}
-
-function findLongestStraightRun(
-  cards: Card[],
-  sameSuit = false,
-): { start: number; end: number; length: number } | null {
-  let best: { start: number; end: number; length: number } | null = null;
-  for (let i = 0; i < cards.length; i++) {
-    const { start, end } = straightRunContaining(cards, i, sameSuit);
-    const length = end - start + 1;
-    if (!best || length > best.length) best = { start, end, length };
-  }
-  return best;
-}
-
-function buildBonusRuns(cards: Card[], bonuses: BonusHit[]): BonusRun[] {
-  const runs: BonusRun[] = [];
-  for (const b of bonuses) {
-    if (b.kind === 'StraightFlush') {
-      const run = findLongestStraightRun(cards, true);
-      if (run && run.length >= 3) {
-        runs.push({
-          kind: 'straightFlush',
-          start: run.start,
-          end: run.end,
-          length: b.length,
-          multiplier: b.multiplier,
-        });
-      }
-    } else if (b.kind === 'Flush') {
-      const run = findLongestFlushRun(cards);
-      if (run && run.length >= 3) {
-        runs.push({
-          kind: 'flush',
-          start: run.start,
-          end: run.end,
-          length: b.length,
-          multiplier: b.multiplier,
-        });
-      }
-    } else if (b.kind === 'Straight') {
-      const run = findLongestStraightRun(cards, false);
-      if (run && run.length >= 3) {
-        runs.push({
-          kind: 'straight',
-          start: run.start,
-          end: run.end,
-          length: b.length,
-          multiplier: b.multiplier,
-        });
-      }
-    }
-  }
-  return runs;
-}
-
-function highlightFor(index: number, runs: BonusRun[]): Highlight | null {
-  // Prefer SF > flush/straight if overlapping
-  let hit: Highlight | null = null;
-  for (const run of runs) {
-    if (index < run.start || index > run.end) continue;
-    if (run.kind === 'straightFlush') return 'straightFlush';
-    if (!hit) hit = run.kind;
-  }
-  return hit;
+function readIndexes(hand: BonusHit): number[] {
+  const raw =
+    hand.cardIndexes ??
+    (hand as BonusHit & { CardIndexes?: number[] }).CardIndexes ??
+    [];
+  return Array.isArray(raw) ? raw.map((n) => Number(n)).filter((n) => Number.isFinite(n)) : [];
 }
 
 function slotMultLabel(index: number, roundMultipliers: number[]): string {
@@ -153,78 +75,105 @@ function formatBonusMult(m: number): string {
   return `×${Number(m.toFixed(2))}`;
 }
 
-/** Font scale: length 3 → 1, length 8 → ~2.1 */
-function bonusFontSize(length: number): string {
-  const t = Math.min(Math.max(length, 3), 8);
-  const scale = 0.85 + (t - 3) * 0.22;
-  return `${scale}rem`;
-}
-
 export function CardSlots({
   cards,
   activeBonuses,
   newCardIndex,
   roundMultipliers,
-  maxCards = 8,
+  maxCards = 7,
   pendingSlot,
+  showNextSlot,
 }: CardSlotsProps) {
-  const runs = buildBonusRuns(cards, activeBonuses);
+  const raw = activeBonuses[0] ?? null;
+  const kind = raw ? normalizeKind(raw.kind as BonusHit['kind'] | number) : null;
+  const indexes = raw ? readIndexes(raw) : [];
+  const tier = raw?.tier ?? (kind ? Object.entries(KIND_BY_TIER).find(([, k]) => k === kind)?.[0] : 0);
+  const tierNum = Number(tier) || 1;
+  const hot = new Set(indexes);
+  const hlKind = kind ? (HAND_HIGHLIGHT[kind] ?? 'pair') : null;
+  const bounceMs = kind && indexes.length > 0 ? bounceDurationMs(tierNum) : undefined;
+  const bounceAmp = kind && indexes.length > 0 ? bounceAmpPx(tierNum) : 3;
+  const nextIndex = cards.length;
+  const showPending = pendingSlot === 0 && cards.length === 0;
+  const itemCount = showPending ? 1 : cards.length + (showNextSlot ? 1 : 0);
+
+  const captionLeft = indexes.length > 0 ? Math.min(...indexes) : 0;
+  const captionRight = indexes.length > 0 ? Math.max(...indexes) : 0;
 
   return (
-    <div className="slots-board" style={{ ['--slots' as string]: maxCards }}>
-      <div className="card-slots">
-        {Array.from({ length: maxCards }, (_, i) => {
-          const card = cards[i];
-          const filled = Boolean(card);
-          const isPending = pendingSlot === i;
-          const isNext = !filled && i === (pendingSlot ?? cards.length);
-          const hl = highlightFor(i, runs);
+    <div
+      className="slots-board cascade-board"
+      style={{ ['--cascade-count' as string]: Math.max(itemCount, 1) }}
+    >
+      <div className="card-cascade" aria-label="Played cards">
+        {showPending ? (
+          <div className="cascade-item pending" style={{ zIndex: 1 }}>
+            <div className="slot-frame">
+              <CardBack />
+            </div>
+          </div>
+        ) : (
+          <>
+            {cards.map((card, i) => {
+              const inHand = hot.has(i);
+              return (
+                <div
+                  key={i}
+                  className={`cascade-item filled ${inHand ? 'hand-hot' : ''}`}
+                  style={{
+                    zIndex: i + 1,
+                    ...(inHand && bounceMs
+                      ? {
+                          ['--bounce-ms' as string]: `${bounceMs}ms`,
+                          ['--bounce-amp' as string]: `${bounceAmp}px`,
+                          ['--bounce-delay' as string]: `${(i % 3) * 28}ms`,
+                        }
+                      : null),
+                  }}
+                >
+                  <div className="slot-frame">
+                    {newCardIndex === i && i > 0 ? (
+                      <DealingCard isNew>
+                        <PlayingCard card={card} index={i} highlight={inHand ? hlKind : null} />
+                      </DealingCard>
+                    ) : (
+                      <FlippingCard isNew={newCardIndex === i}>
+                        <PlayingCard card={card} index={i} highlight={inHand ? hlKind : null} />
+                      </FlippingCard>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
 
-          return (
-            <div
-              key={i}
-              className={`card-slot ${filled ? 'filled' : ''} ${isPending ? 'pending' : ''} ${isNext && !filled ? 'next' : ''}`}
-            >
-              <div className="slot-frame">
-                {card ? (
-                  newCardIndex === i && i > 0 ? (
-                    <DealingCard isNew>
-                      <PlayingCard card={card} index={i} highlight={hl} />
-                    </DealingCard>
-                  ) : (
-                    <FlippingCard isNew={newCardIndex === i}>
-                      <PlayingCard card={card} index={i} highlight={hl} />
-                    </FlippingCard>
-                  )
-                ) : isPending ? (
-                  <CardBack />
-                ) : (
-                  <div className={`slot-empty ${i === maxCards - 1 ? 'slot-empty-final' : ''}`}>
-                    <span className={`slot-mult-in ${i === maxCards - 1 ? 'slot-mult-final' : ''}`}>
-                      {slotMultLabel(i, roundMultipliers)}
+            {showNextSlot && nextIndex < maxCards && (
+              <div className="cascade-item next" style={{ zIndex: nextIndex + 1 }}>
+                <div className="slot-frame">
+                  <div className={`slot-empty ${nextIndex === maxCards - 1 ? 'slot-empty-final' : ''}`}>
+                    <span className={`slot-mult-in ${nextIndex === maxCards - 1 ? 'slot-mult-final' : ''}`}>
+                      {slotMultLabel(nextIndex, roundMultipliers)}
                     </span>
                   </div>
-                )}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            )}
+          </>
+        )}
       </div>
 
-      <div className="bonus-captions" aria-live="polite">
-        {runs.map((run) => (
+      {kind && indexes.length > 0 && raw && (
+        <div className="bonus-captions cascade-bonuses" aria-live="polite">
           <div
-            key={`${run.kind}-${run.start}-${run.end}`}
-            className={`bonus-caption bonus-caption-${run.kind}`}
+            className={`bonus-caption bonus-caption-${kind}`}
             style={{
-              gridColumn: `${run.start + 1} / ${run.end + 2}`,
-              fontSize: bonusFontSize(run.length),
+              left: `calc(${captionLeft} * var(--card-w) * 0.5)`,
+              width: `calc(${captionRight - captionLeft} * var(--card-w) * 0.5 + var(--card-w))`,
             }}
           >
-            {formatBonusMult(run.multiplier)}
+            {formatBonusMult(raw.multiplier)}
           </div>
-        ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

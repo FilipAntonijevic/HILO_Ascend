@@ -8,10 +8,10 @@ public enum Suit
     Spades = 3
 }
 
-/// <summary>Rank 1 = Ace (lowest) … 13 = King (highest).</summary>
+/// <summary>Rank 1 = Ace (highest) … 13 = King. Ace compares as 14.</summary>
 public record Card(int Rank, Suit Suit)
 {
-    public int CompareValue => Rank;
+    public int CompareValue => Rank == 1 ? 14 : Rank;
 
     public string RankLabel => Rank switch
     {
@@ -36,12 +36,24 @@ public record Card(int Rank, Suit Suit)
 
 public enum BonusKind
 {
-    Flush,
-    Straight,
-    StraightFlush
+    Pair = 1,
+    TwoPair = 2,
+    ThreeOfAKind = 3,
+    Straight = 4,
+    Flush = 5,
+    FullHouse = 6,
+    FourOfAKind = 7,
+    StraightFlush = 8,
+    RoyalFlush = 9
 }
 
-public record BonusHit(BonusKind Kind, int Length, int Tier, decimal Multiplier);
+public record BonusHit(
+    BonusKind Kind,
+    int Length,
+    int Tier,
+    decimal Multiplier,
+    List<int> CardIndexes
+);
 
 public enum Guess
 {
@@ -61,9 +73,7 @@ public enum GamePhase
 
 public record MultiplierConfig(
     decimal[] RoundMultipliers,
-    decimal[] FlushMultipliers,
-    decimal[] StraightMultipliers,
-    decimal[] StraightFlushMultipliers
+    IReadOnlyDictionary<string, decimal> HandMultipliers
 );
 
 public class GameState
@@ -83,7 +93,7 @@ public class GameState
     public double? HigherProbability { get; set; }
     /// <summary>P(next &lt; current) from remaining deck, or null if not guessing.</summary>
     public double? LowerProbability { get; set; }
-    public const int MaxCards = 8;
+    public const int MaxCards = 7;
 }
 
 public record SetBalanceRequest(decimal Balance);
