@@ -120,6 +120,8 @@ export default function App() {
 
   /** Face-down only while waiting for the first Start. */
   const pendingSlot = canStart && cardCount === 0 ? 0 : null;
+  /** Only the next empty seat (to the right), not a full predetermined row. */
+  const showNextSlot = inRound && cardCount > 0 && cardCount < maxCards;
 
   return (
     <div className={`app-shell ${mobile ? 'mobile' : 'desktop'}`}>
@@ -160,6 +162,7 @@ export default function App() {
           roundMultipliers={roundMults}
           maxCards={maxCards}
           pendingSlot={pendingSlot}
+          showNextSlot={showNextSlot}
         />
         {state?.message && inRound && <p className="table-msg">{state.message}</p>}
         {error && <p className="error-msg">{error}</p>}

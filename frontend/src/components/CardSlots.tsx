@@ -9,6 +9,7 @@ interface CardSlotsProps {
   roundMultipliers: number[];
   maxCards?: number;
   pendingSlot: number | null;
+  showNextSlot: boolean;
 }
 
 type Highlight = 'straight' | 'flush' | 'straightFlush';
@@ -131,7 +132,6 @@ function buildBonusRuns(cards: Card[], bonuses: BonusHit[]): BonusRun[] {
 }
 
 function highlightFor(index: number, runs: BonusRun[]): Highlight | null {
-  // Prefer SF > flush/straight if overlapping
   let hit: Highlight | null = null;
   for (const run of runs) {
     if (index < run.start || index > run.end) continue;
@@ -167,64 +167,78 @@ export function CardSlots({
   roundMultipliers,
   maxCards = 8,
   pendingSlot,
+  showNextSlot,
 }: CardSlotsProps) {
   const runs = buildBonusRuns(cards, activeBonuses);
+  const nextIndex = cards.length;
+  const showPending = pendingSlot === 0 && cards.length === 0;
+  const itemCount = showPending ? 1 : cards.length + (showNextSlot ? 1 : 0);
 
   return (
-    <div className="slots-board" style={{ ['--slots' as string]: maxCards }}>
-      <div className="card-slots">
-        {Array.from({ length: maxCards }, (_, i) => {
-          const card = cards[i];
-          const filled = Boolean(card);
-          const isPending = pendingSlot === i;
-          const isNext = !filled && i === (pendingSlot ?? cards.length);
-          const hl = highlightFor(i, runs);
+    <div
+      className="slots-board cascade-board"
+      style={{ ['--cascade-count' as string]: Math.max(itemCount, 1) }}
+    >
+      <div className="card-cascade" aria-label="Played cards">
+        {showPending ? (
+          <div className="cascade-item pending" style={{ zIndex: 1 }}>
+            <div className="slot-frame">
+              <CardBack />
+            </div>
+          </div>
+        ) : (
+          <>
+            {cards.map((card, i) => {
+              const hl = highlightFor(i, runs);
+              return (
+                <div key={i} className="cascade-item filled" style={{ zIndex: i + 1 }}>
+                  <div className="slot-frame">
+                    {newCardIndex === i && i > 0 ? (
+                      <DealingCard isNew>
+                        <PlayingCard card={card} index={i} highlight={hl} />
+                      </DealingCard>
+                    ) : (
+                      <FlippingCard isNew={newCardIndex === i}>
+                        <PlayingCard card={card} index={i} highlight={hl} />
+                      </FlippingCard>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
 
-          return (
-            <div
-              key={i}
-              className={`card-slot ${filled ? 'filled' : ''} ${isPending ? 'pending' : ''} ${isNext && !filled ? 'next' : ''}`}
-            >
-              <div className="slot-frame">
-                {card ? (
-                  newCardIndex === i && i > 0 ? (
-                    <DealingCard isNew>
-                      <PlayingCard card={card} index={i} highlight={hl} />
-                    </DealingCard>
-                  ) : (
-                    <FlippingCard isNew={newCardIndex === i}>
-                      <PlayingCard card={card} index={i} highlight={hl} />
-                    </FlippingCard>
-                  )
-                ) : isPending ? (
-                  <CardBack />
-                ) : (
-                  <div className={`slot-empty ${i === maxCards - 1 ? 'slot-empty-final' : ''}`}>
-                    <span className={`slot-mult-in ${i === maxCards - 1 ? 'slot-mult-final' : ''}`}>
-                      {slotMultLabel(i, roundMultipliers)}
+            {showNextSlot && nextIndex < maxCards && (
+              <div className="cascade-item next" style={{ zIndex: nextIndex + 1 }}>
+                <div className="slot-frame">
+                  <div className={`slot-empty ${nextIndex === maxCards - 1 ? 'slot-empty-final' : ''}`}>
+                    <span className={`slot-mult-in ${nextIndex === maxCards - 1 ? 'slot-mult-final' : ''}`}>
+                      {slotMultLabel(nextIndex, roundMultipliers)}
                     </span>
                   </div>
-                )}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            )}
+          </>
+        )}
       </div>
 
-      <div className="bonus-captions" aria-live="polite">
-        {runs.map((run) => (
-          <div
-            key={`${run.kind}-${run.start}-${run.end}`}
-            className={`bonus-caption bonus-caption-${run.kind}`}
-            style={{
-              gridColumn: `${run.start + 1} / ${run.end + 2}`,
-              fontSize: bonusFontSize(run.length),
-            }}
-          >
-            {formatBonusMult(run.multiplier)}
-          </div>
-        ))}
-      </div>
+      {runs.length > 0 && (
+        <div className="bonus-captions cascade-bonuses" aria-live="polite">
+          {runs.map((run) => (
+            <div
+              key={`${run.kind}-${run.start}-${run.end}`}
+              className={`bonus-caption bonus-caption-${run.kind}`}
+              style={{
+                left: `calc(${run.start} * var(--card-w) * 0.5)`,
+                width: `calc(${run.end - run.start} * var(--card-w) * 0.5 + var(--card-w))`,
+                fontSize: bonusFontSize(run.length),
+              }}
+            >
+              {formatBonusMult(run.multiplier)}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -46,7 +46,7 @@ export function DealingCard({
   return (
     <motion.div
       className="flip-wrap"
-      initial={isNew ? { rotateY: 180, x: 56, opacity: 0, scale: 0.92 } : false}
+      initial={isNew ? { rotateY: 180, x: 40, opacity: 0, scale: 0.92 } : false}
       animate={{ rotateY: 0, x: 0, opacity: 1, scale: 1 }}
       transition={{ type: 'spring', stiffness: 240, damping: 20 }}
     >
