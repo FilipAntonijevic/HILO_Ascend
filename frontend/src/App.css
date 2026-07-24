@@ -11,6 +11,7 @@
   --ok: #3ecf8e;
   --card-w: 132px;
   --card-h: 185px;
+  --hand-lift: 16px;
   --page-pad: 1.5rem;
   --font-display: 'Fraunces', 'Georgia', serif;
   --font-body: 'DM Sans', 'Trebuchet MS', sans-serif;
@@ -198,7 +199,8 @@ body {
   padding: 0.55rem 1.5rem 0.85rem;
   overflow: hidden;
   min-height: 0;
-  height: calc(var(--card-h) + 6.5rem);
+  /* Extra headroom so lifted hand cards are not clipped. */
+  height: calc(var(--card-h) + 6.5rem + var(--hand-lift, 16px));
   flex: 0 0 auto;
 }
 
@@ -246,6 +248,7 @@ body {
   gap: 0.45rem;
   width: 100%;
   align-items: center;
+  padding-top: var(--hand-lift, 16px);
 }
 
 .cascade-board {
@@ -268,30 +271,19 @@ body {
   width: var(--card-w);
   position: relative;
   overflow: visible;
-}
-
-.cascade-item.hand-hot {
-  animation: hand-hot-jiggle var(--bounce-ms, 400ms) ease-in-out infinite;
-  animation-delay: var(--bounce-delay, 0ms);
+  transform: translateY(0);
+  transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;
 }
 
-@keyframes hand-hot-jiggle {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  25% {
-    transform: translateY(calc(-1 * var(--bounce-amp, 3px)));
-  }
-  75% {
-    transform: translateY(var(--bounce-amp, 3px));
-  }
+/* Highlighted hand cards sit slightly above the cascade; removing the class lowers them. */
+.cascade-item.hand-hot {
+  transform: translateY(calc(-1 * var(--hand-lift, 16px)));
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cascade-item.hand-hot {
-    animation: none;
+  .cascade-item {
+    transition: none;
   }
 }
 
@@ -512,6 +504,7 @@ body {
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
   position: relative;
   overflow: hidden;
+  transition: box-shadow 0.32s ease;
 }
 
 .card-face.red {
@@ -646,32 +639,6 @@ body {
 @keyframes sf-pulse {
   50% {
     filter: brightness(1.08);
-  }
-}
-
-/* Manic few-pixel bounce for linked bonus cards; speed via --bounce-ms. */
-.playing-card.hl-bounce {
-  animation: bonus-jiggle var(--bounce-ms, 400ms) ease-in-out infinite;
-  animation-delay: var(--bounce-delay, 0ms);
-  will-change: transform;
-}
-
-@keyframes bonus-jiggle {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  25% {
-    transform: translateY(-3px);
-  }
-  75% {
-    transform: translateY(3px);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .playing-card.hl-bounce {
-    animation: none;
   }
 }
 
@@ -1038,7 +1005,7 @@ body {
 }
 
 .app-shell.mobile .table {
-  height: calc(var(--card-h) + 5.5rem);
+  height: calc(var(--card-h) + 5.5rem + var(--hand-lift, 16px));
   border-radius: 14px;
   padding: 0.45rem 0.45rem 0.7rem;
 }

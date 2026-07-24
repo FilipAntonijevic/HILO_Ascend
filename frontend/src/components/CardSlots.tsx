@@ -38,17 +38,6 @@ const HAND_HIGHLIGHT: Record<string, Highlight> = {
   RoyalFlush: 'straightFlush',
 };
 
-/** Stronger hand → much faster jiggle (Pair ~520ms … Royal ~85ms). */
-function bounceDurationMs(tier: number): number {
-  const t = Math.min(Math.max(tier, 1), 9);
-  return Math.round(520 * Math.pow(0.78, t - 1));
-}
-
-function bounceAmpPx(tier: number): number {
-  const t = Math.min(Math.max(tier, 1), 9);
-  return 3 + Math.floor((t - 1) * 0.35); // 3px … ~6px
-}
-
 function normalizeKind(kind: BonusHit['kind'] | number): BonusKind | null {
   if (typeof kind === 'number') return KIND_BY_TIER[kind] ?? null;
   if (typeof kind === 'string' && kind in HAND_HIGHLIGHT) return kind as BonusKind;
@@ -87,12 +76,8 @@ export function CardSlots({
   const raw = activeBonuses[0] ?? null;
   const kind = raw ? normalizeKind(raw.kind as BonusHit['kind'] | number) : null;
   const indexes = raw ? readIndexes(raw) : [];
-  const tier = raw?.tier ?? (kind ? Object.entries(KIND_BY_TIER).find(([, k]) => k === kind)?.[0] : 0);
-  const tierNum = Number(tier) || 1;
   const hot = new Set(indexes);
   const hlKind = kind ? (HAND_HIGHLIGHT[kind] ?? 'pair') : null;
-  const bounceMs = kind && indexes.length > 0 ? bounceDurationMs(tierNum) : undefined;
-  const bounceAmp = kind && indexes.length > 0 ? bounceAmpPx(tierNum) : 3;
   const nextIndex = cards.length;
   const showPending = pendingSlot === 0 && cards.length === 0;
   const itemCount = showPending ? 1 : cards.length + (showNextSlot ? 1 : 0);
@@ -120,16 +105,7 @@ export function CardSlots({
                 <div
                   key={i}
                   className={`cascade-item filled ${inHand ? 'hand-hot' : ''}`}
-                  style={{
-                    zIndex: i + 1,
-                    ...(inHand && bounceMs
-                      ? {
-                          ['--bounce-ms' as string]: `${bounceMs}ms`,
-                          ['--bounce-amp' as string]: `${bounceAmp}px`,
-                          ['--bounce-delay' as string]: `${(i % 3) * 28}ms`,
-                        }
-                      : null),
-                  }}
+                  style={{ zIndex: i + 1 }}
                 >
                   <div className="slot-frame">
                     {newCardIndex === i && i > 0 ? (
