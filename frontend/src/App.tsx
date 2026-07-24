@@ -75,8 +75,11 @@ export default function App() {
       setNewCardIndex(next.cards.length - 1);
       window.setTimeout(() => setNewCardIndex(null), 900);
     }
-    if (next.lastBonuses?.length) {
+    // Only flash special mult toasts when the guess actually won.
+    if (next.phase !== 'Lost' && next.lastBonuses?.length) {
       setFlashBonuses(next.lastBonuses);
+    } else if (next.phase === 'Lost') {
+      setFlashBonuses([]);
     }
   }
 

@@ -89,7 +89,8 @@ public class GameService
                 ? "Same rank — you lose. Strict Higher/Lower only."
                 : "Wrong guess — pot lost.";
             session.LastBonuses = [];
-            session.ActiveBonuses = DetectBonuses(session.Cards);
+            // Losing card must not create/show flush/straight special mults.
+            session.ActiveBonuses = DetectBonuses(session.Cards.Take(session.Cards.Count - 1).ToList());
             return session.ToState();
         }
 
