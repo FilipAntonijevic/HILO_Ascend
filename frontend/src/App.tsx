@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, type GameConfig, type GameState } from './api';
 import { BonusOverlay } from './components/BonusOverlay';
 import { CardSlots } from './components/CardSlots';
+import { sfx, unlockAudio } from './sounds';
 import './App.css';
 
 function useIsMobile(breakpoint = 768) {
@@ -74,12 +75,14 @@ export default function App() {
     if (animateCard && next.cards.length > 0) {
       setNewCardIndex(next.cards.length - 1);
       window.setTimeout(() => setNewCardIndex(null), 900);
+      window.setTimeout(() => sfx.cardFlip(), 40);
     }
-    // Only flash special mult toasts when the guess actually won.
-    if (next.phase !== 'Lost' && next.lastBonuses?.length) {
-      setFlashBonuses(next.lastBonuses);
-    } else if (next.phase === 'Lost') {
+    if (next.phase === 'Lost') {
       setFlashBonuses([]);
+      sfx.bust();
+    } else if (next.lastBonuses?.length) {
+      setFlashBonuses(next.lastBonuses);
+      window.setTimeout(() => sfx.bonus(), animateCard ? 220 : 40);
     }
   }
 
@@ -95,6 +98,8 @@ export default function App() {
   }
 
   async function onStart() {
+    unlockAudio();
+    sfx.click();
     const bet = Number(betInput);
     if (!Number.isFinite(bet) || bet <= 0) {
       setError('Enter a valid bet.');
@@ -108,11 +113,18 @@ export default function App() {
   }
 
   async function onGuess(guess: 'Higher' | 'Lower') {
+    unlockAudio();
+    sfx.click();
     await run(() => api.guess(guess), (s) => applyState(s, true));
   }
 
   async function onCashOut() {
-    await run(() => api.cashOut(), (s) => applyState(s, false));
+    unlockAudio();
+    sfx.click();
+    await run(() => api.cashOut(), (s) => {
+      applyState(s, false);
+      sfx.cashOut();
+    });
   }
 
   const sessionMult = state?.currentMultiplier ?? 1;
