@@ -9,7 +9,7 @@ public class GameService
 
     /// <summary>Fixed round multipliers m1…m6 (cards 2…7).</summary>
     public static readonly decimal[] RoundMult =
-        [1.1m, 1.2m, 1.3m, 1.4m, 1.5m, 2.0m];
+        [1.1m, 1.2m, 1.3m, 1.4m, 1.5m, 1.6m];
 
     /// <summary>Best 5-card poker hand multipliers.</summary>
     public static readonly IReadOnlyDictionary<BonusKind, decimal> HandMult =
