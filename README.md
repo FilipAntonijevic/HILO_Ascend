@@ -29,7 +29,7 @@ Open http://localhost:5173
 - Correct guess multiplies the pot by `m1`…`m6`.
 - After the first win you may **Cash Out** or continue, up to **7 cards**.
 - Bonuses use the **best poker hand** from up to 5 of the played cards (Ace high):
-  - Pair ×1.5 · Two pair ×3 · Three of a kind ×10 · Straight ×10
-  - Flush ×10 · Full house ×20
-  - Four of a kind / Straight flush / Royal flush ×50
+  - Pair ×1.15 · Two pair ×1.65 · Three of a kind / Straight / Flush ×4
+  - Full house ×7 · Four of a kind / Straight flush / Royal flush ×16
+  - Tuned for ~97% RTP with a ≥60% hit / otherwise cash-out strategy
 - Bonus mult applies when the hand **upgrades**; losing on a card does not award a new hand.
