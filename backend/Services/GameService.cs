@@ -193,9 +193,9 @@ public class GameService
 
     /// <summary>
     /// Detect flush / straight / straight-flush on consecutive cards.
-    /// Ace is always low (A-2-3 counts; Q-K-A does not).
+    /// Ace is high (CompareValue 14): Q-K-A counts; A-2-3 does not.
     /// Straight flush segments get SF mult; a longer plain straight beyond SF
-    /// still counts (e.g. 1234♥ + 5♠ → SF4 + S5).
+    /// still counts (e.g. 10-J-Q-K♥ + A♠ → SF4 + S5 via K-A).
     /// </summary>
     public static List<BonusHit> DetectBonuses(IReadOnlyList<Card> cards)
     {
@@ -257,7 +257,7 @@ public class GameService
 
     private static int LongestStraight(IReadOnlyList<Card> cards)
     {
-        var values = cards.Select(c => c.Rank).ToArray();
+        var values = cards.Select(c => c.CompareValue).ToArray();
         return LongestMonotonicRun(values);
     }
 
@@ -288,7 +288,7 @@ public class GameService
             var segment = cards.Skip(i).Take(j - i).ToList();
             if (segment.Count >= 2)
             {
-                var ranks = segment.Select(c => c.Rank).ToArray();
+                var ranks = segment.Select(c => c.CompareValue).ToArray();
                 best = Math.Max(best, LongestMonotonicRun(ranks));
             }
             i = j;
@@ -340,8 +340,8 @@ public class GameService
                 var l = 0;
                 foreach (var c in Deck)
                 {
-                    if (c.Rank > current.Rank) h++;
-                    else if (c.Rank < current.Rank) l++;
+                    if (c.CompareValue > current.CompareValue) h++;
+                    else if (c.CompareValue < current.CompareValue) l++;
                 }
 
                 var rem = Deck.Count;

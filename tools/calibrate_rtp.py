@@ -44,6 +44,11 @@ def longest_mono(vals):
     return best
 
 
+def cv(rank: int) -> int:
+    """Ace (1) is high."""
+    return 14 if rank == 1 else rank
+
+
 def longest_flush(suits):
     best = run = 1
     for i in range(1, len(suits)):
@@ -61,7 +66,7 @@ def longest_sf(ranks, suits):
         while j < n and suits[j] == suits[i]:
             j += 1
         if j - i >= 2:
-            best = max(best, longest_mono(ranks[i:j]))
+            best = max(best, longest_mono([cv(r) for r in ranks[i:j]]))
         i = j
     return best
 
@@ -71,7 +76,7 @@ def detect(ranks, suits, ft, st, sft):
         return []
     sf = longest_sf(ranks, suits)
     fl = longest_flush(suits)
-    sr = longest_mono(ranks)
+    sr = longest_mono([cv(r) for r in ranks])
     hits = []
 
     def add(kind, length, table):
@@ -123,8 +128,9 @@ def rtp_dynamic(R: float, bscale: float, n: int, seed: int) -> float:
 
         while len(ranks) < MAX_CARDS:
             cur = ranks[-1]
-            higher = sum(rc[r] for r in range(cur + 1, 14))
-            lower = sum(rc[r] for r in range(1, cur))
+            cur_v = cv(cur)
+            higher = sum(rc[r] for r in range(1, 14) if cv(r) > cur_v)
+            lower = sum(rc[r] for r in range(1, 14) if cv(r) < cur_v)
             rem = sum(rc[1:])
             go_h = higher >= lower
             p = (higher if go_h else lower) / rem
@@ -141,7 +147,7 @@ def rtp_dynamic(R: float, bscale: float, n: int, seed: int) -> float:
             rc[nxt_r] -= 1
             ranks.append(nxt_r)
             suits.append(nxt_s)
-            won = (nxt_r > cur) if go_h else (nxt_r < cur)
+            won = (cv(nxt_r) > cur_v) if go_h else (cv(nxt_r) < cur_v)
             if not won:
                 lost = True
                 break

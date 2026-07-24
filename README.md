@@ -30,5 +30,6 @@ Open http://localhost:5173
 - After the first win you may **Cash Out** or continue, up to **7 cards**.
 - Bonuses on consecutive cards:
   - **Flush** (3+) → `f1`…`f8` (orange)
-  - **Straight** up/down (3+) → `s1`…`s8` (light blue)
-  - **Straight flush** → `sf` multipliers (both colors); a longer plain straight beyond the SF still counts (e.g. `1234♥` + `5♠` → SF4 + S5).
+  - **Straight** up/down (3+) → `s1`…`s8` (light blue); Ace is high (Q-K-A counts, A-2-3 does not)
+  - **Straight flush** → `sf` multipliers (both colors); a longer plain straight beyond the SF still counts
+- **Ace is strongest** (beats King). Same rank always loses.

@@ -23,7 +23,7 @@ interface BonusRun {
 }
 
 function compareVal(c: Card): number {
-  return c.rank;
+  return c.compareValue ?? (c.rank === 1 ? 14 : c.rank);
 }
 
 function flushRunContaining(cards: Card[], index: number): { start: number; end: number } {

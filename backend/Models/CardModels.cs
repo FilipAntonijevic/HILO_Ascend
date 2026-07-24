@@ -8,10 +8,10 @@ public enum Suit
     Spades = 3
 }
 
-/// <summary>Rank 1 = Ace (lowest) … 13 = King (highest).</summary>
+/// <summary>Rank 1 = Ace (highest) … 13 = King. Ace compares as 14.</summary>
 public record Card(int Rank, Suit Suit)
 {
-    public int CompareValue => Rank;
+    public int CompareValue => Rank == 1 ? 14 : Rank;
 
     public string RankLabel => Rank switch
     {
