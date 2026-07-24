@@ -274,7 +274,6 @@ body {
   animation: hand-hot-jiggle var(--bounce-ms, 400ms) ease-in-out infinite;
   animation-delay: var(--bounce-delay, 0ms);
   will-change: transform;
-  z-index: 20 !important;
 }
 
 @keyframes hand-hot-jiggle {
