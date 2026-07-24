@@ -287,24 +287,33 @@ public class GameService
             .ToList();
         var counts = byRank.Select(g => g.Count()).ToArray();
 
+        // Only highlight cards that define the hand (no kickers).
+        List<int> Essential(params int[] takeCounts)
+        {
+            var list = new List<int>();
+            for (var i = 0; i < takeCounts.Length; i++)
+                list.AddRange(byRank[i].Select(x => x.idx).Take(takeCounts[i]));
+            return list;
+        }
+
         if (isRoyal)
             return Make(BonusKind.RoyalFlush, indexes);
         if (isFlush && isStraight)
             return Make(BonusKind.StraightFlush, indexes);
         if (counts[0] == 4)
-            return Make(BonusKind.FourOfAKind, indexes);
+            return Make(BonusKind.FourOfAKind, Essential(4));
         if (counts[0] == 3 && counts.Length > 1 && counts[1] == 2)
-            return Make(BonusKind.FullHouse, indexes);
+            return Make(BonusKind.FullHouse, Essential(3, 2));
         if (isFlush)
             return Make(BonusKind.Flush, indexes);
         if (isStraight)
             return Make(BonusKind.Straight, indexes);
         if (counts[0] == 3)
-            return Make(BonusKind.ThreeOfAKind, indexes);
+            return Make(BonusKind.ThreeOfAKind, Essential(3));
         if (counts[0] == 2 && counts.Length > 1 && counts[1] == 2)
-            return Make(BonusKind.TwoPair, indexes);
+            return Make(BonusKind.TwoPair, Essential(2, 2));
         if (counts[0] == 2)
-            return Make(BonusKind.Pair, indexes);
+            return Make(BonusKind.Pair, Essential(2));
         return null;
     }
 
