@@ -38,6 +38,8 @@ export interface GameState {
   activeBonuses: BonusHit[];
   successfulGuesses: number;
   message: string | null;
+  higherProbability: number | null;
+  lowerProbability: number | null;
 }
 
 export interface GameConfig {
