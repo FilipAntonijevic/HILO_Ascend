@@ -884,7 +884,7 @@ body {
 /* —— Mobile —— */
 .app-shell.mobile {
   --page-pad: 0.75rem;
-  --card-w: 78px;
+  --card-w: 66px;
   --card-h: 110px;
   padding: 0.75rem var(--page-pad) 0;
   max-width: 100%;
