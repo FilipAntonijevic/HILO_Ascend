@@ -12,8 +12,6 @@ interface CardSlotsProps {
   showNextSlot: boolean;
 }
 
-type Highlight = 'straight' | 'flush' | 'straightFlush' | 'pair' | null;
-
 const KIND_BY_TIER: Record<number, BonusKind> = {
   1: 'Pair',
   2: 'TwoPair',
@@ -26,21 +24,11 @@ const KIND_BY_TIER: Record<number, BonusKind> = {
   9: 'RoyalFlush',
 };
 
-const HAND_HIGHLIGHT: Record<string, Highlight> = {
-  Pair: 'pair',
-  TwoPair: 'pair',
-  ThreeOfAKind: 'pair',
-  FullHouse: 'pair',
-  FourOfAKind: 'pair',
-  Straight: 'straight',
-  Flush: 'flush',
-  StraightFlush: 'straightFlush',
-  RoyalFlush: 'straightFlush',
-};
+const HAND_KINDS = new Set<string>(Object.values(KIND_BY_TIER));
 
 function normalizeKind(kind: BonusHit['kind'] | number): BonusKind | null {
   if (typeof kind === 'number') return KIND_BY_TIER[kind] ?? null;
-  if (typeof kind === 'string' && kind in HAND_HIGHLIGHT) return kind as BonusKind;
+  if (typeof kind === 'string' && HAND_KINDS.has(kind)) return kind as BonusKind;
   return null;
 }
 
@@ -77,7 +65,6 @@ export function CardSlots({
   const kind = raw ? normalizeKind(raw.kind as BonusHit['kind'] | number) : null;
   const indexes = raw ? readIndexes(raw) : [];
   const hot = new Set(indexes);
-  const hlKind = kind ? (HAND_HIGHLIGHT[kind] ?? 'pair') : null;
   const nextIndex = cards.length;
   const showPending = pendingSlot === 0 && cards.length === 0;
   const itemCount = showPending ? 1 : cards.length + (showNextSlot ? 1 : 0);
@@ -110,11 +97,11 @@ export function CardSlots({
                   <div className="slot-frame">
                     {newCardIndex === i && i > 0 ? (
                       <DealingCard isNew>
-                        <PlayingCard card={card} index={i} highlight={inHand ? hlKind : null} />
+                        <PlayingCard card={card} index={i} highlight={inHand ? kind : null} />
                       </DealingCard>
                     ) : (
                       <FlippingCard isNew={newCardIndex === i}>
-                        <PlayingCard card={card} index={i} highlight={inHand ? hlKind : null} />
+                        <PlayingCard card={card} index={i} highlight={inHand ? kind : null} />
                       </FlippingCard>
                     )}
                   </div>
