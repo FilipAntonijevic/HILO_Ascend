@@ -62,7 +62,7 @@ public class GameService
         session.Deck = BuildShuffledDeck();
         session.Cards.Add(Draw(session));
         session.Phase = GamePhase.Playing;
-        session.Message = "Guess Higher or Lower.";
+        session.Message = "Guess Same-or-Higher or Same-or-Lower.";
         session.LastBonuses = [];
         session.ActiveBonuses = [];
         return session.ToState();
@@ -79,16 +79,15 @@ public class GameService
         session.Cards.Add(next);
 
         var cmp = next.CompareValue.CompareTo(previous.CompareValue);
-        var win = direction == Models.Guess.Higher ? cmp > 0 : cmp < 0;
+        // Ties always win: Same-or-Higher / Same-or-Lower.
+        var win = direction == Models.Guess.Higher ? cmp >= 0 : cmp <= 0;
 
         if (!win)
         {
             session.Pot = 0;
             session.CurrentMultiplier = 0;
             session.Phase = GamePhase.Lost;
-            session.Message = cmp == 0
-                ? "Same rank — you lose. Strict Higher/Lower only."
-                : "Wrong guess — pot lost.";
+            session.Message = "Wrong guess — pot lost.";
             session.LastBonuses = [];
             // Losing card must not create/show poker hand bonuses.
             session.ActiveBonuses = DetectBonuses(session.Cards.Take(session.Cards.Count - 1).ToList());
@@ -394,15 +393,19 @@ public class GameService
                 var current = Cards[^1];
                 var h = 0;
                 var l = 0;
+                var eq = 0;
                 foreach (var c in Deck)
                 {
-                    if (c.CompareValue > current.CompareValue) h++;
-                    else if (c.CompareValue < current.CompareValue) l++;
+                    var cmp = c.CompareValue.CompareTo(current.CompareValue);
+                    if (cmp > 0) h++;
+                    else if (cmp < 0) l++;
+                    else eq++;
                 }
 
                 var rem = Deck.Count;
-                higher = (double)h / rem;
-                lower = (double)l / rem;
+                // Same-or-Higher / Same-or-Lower include ties.
+                higher = (double)(h + eq) / rem;
+                lower = (double)(l + eq) / rem;
             }
 
             return new GameState
