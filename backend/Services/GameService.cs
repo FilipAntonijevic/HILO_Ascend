@@ -11,19 +11,19 @@ public class GameService
     public static readonly decimal[] RoundMult =
         [1.1m, 1.2m, 1.3m, 1.4m, 1.5m, 2.0m];
 
-    /// <summary>Best 5-card poker hand multipliers (non-royal straight flush uses ×100).</summary>
+    /// <summary>Best 5-card poker hand multipliers.</summary>
     public static readonly IReadOnlyDictionary<BonusKind, decimal> HandMult =
         new Dictionary<BonusKind, decimal>
         {
-            [BonusKind.Pair] = 2m,
-            [BonusKind.TwoPair] = 5m,
-            [BonusKind.ThreeOfAKind] = 10m,
+            [BonusKind.Pair] = 1.5m,
+            [BonusKind.TwoPair] = 3m,
+            [BonusKind.ThreeOfAKind] = 15m,
             [BonusKind.Straight] = 20m,
             [BonusKind.Flush] = 25m,
             [BonusKind.FullHouse] = 50m,
-            [BonusKind.FourOfAKind] = 250m,
+            [BonusKind.FourOfAKind] = 100m,
             [BonusKind.StraightFlush] = 100m,
-            [BonusKind.RoyalFlush] = 500m,
+            [BonusKind.RoyalFlush] = 100m,
         };
 
     private readonly ConcurrentDictionary<string, GameSession> _sessions = new();
