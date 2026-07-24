@@ -7,16 +7,9 @@ public class GameService
 {
     public const int MaxCards = 7;
 
-    /// <summary>Fixed round multipliers m1…m6 (cards 2…7). First five are 2dp; last makes product exactly 10.</summary>
+    /// <summary>Fixed round multipliers m1…m6 (cards 2…7).</summary>
     public static readonly decimal[] RoundMult =
-    [
-        1.15m,
-        1.26m,
-        1.39m,
-        1.54m,
-        1.69m,
-        10m / (1.15m * 1.26m * 1.39m * 1.54m * 1.69m),
-    ];
+        [1.1m, 1.2m, 1.3m, 1.4m, 1.5m, 2.0m];
 
     /// <summary>Best 5-card poker hand multipliers.</summary>
     public static readonly IReadOnlyDictionary<BonusKind, decimal> HandMult =
