@@ -7,11 +7,9 @@ public class GameService
 {
     public const int MaxCards = 8;
 
-    /// <summary>Fixed round multipliers m1…m7.</summary>
-    // Same accelerating curve as before, juice-scaled so 65%-threshold
-    // strategy ROI ≈ 90% without bonuses (product ≈ 10.94).
+    /// <summary>Fixed round multipliers m1…m7 (cards 2…8). Last step jumps to ×2.</summary>
     public static readonly decimal[] RoundMult =
-        [1.1515m, 1.2189m, 1.3014m, 1.3968m, 1.5036m, 1.6232m, 1.7573m];
+        [1.1m, 1.2m, 1.3m, 1.4m, 1.5m, 1.6m, 2.0m];
 
     /// <summary>f1…f8 for flush lengths 3…10: 1.5, 3, 4.5, … (+1.5 each).</summary>
     public static readonly decimal[] FlushMult =
