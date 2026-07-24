@@ -13,17 +13,17 @@ public class GameService
     public static readonly decimal[] RoundMult =
         [1.1515m, 1.2189m, 1.3014m, 1.3968m, 1.5036m, 1.6232m, 1.7573m];
 
-    /// <summary>f1…f8 for flush lengths 3…10: 1.2, 1.3, … (+0.1 each).</summary>
+    /// <summary>f1…f8 for flush lengths 3…10: 1.5, 3, 4.5, … (+1.5 each).</summary>
     public static readonly decimal[] FlushMult =
-        [1.2m, 1.3m, 1.4m, 1.5m, 1.6m, 1.7m, 1.8m, 1.9m];
+        [1.5m, 3m, 4.5m, 6m, 7.5m, 9m, 10.5m, 12m];
 
-    /// <summary>s1…s8 for straight lengths 3…10: same ladder as flush.</summary>
+    /// <summary>s1…s8 for straight lengths 3…10: 3, 6, 9, … (+3 each).</summary>
     public static readonly decimal[] StraightMult =
-        [1.2m, 1.3m, 1.4m, 1.5m, 1.6m, 1.7m, 1.8m, 1.9m];
+        [3m, 6m, 9m, 12m, 15m, 18m, 21m, 24m];
 
-    /// <summary>Straight flush = flush × straight (no extra mult).</summary>
+    /// <summary>Straight flush = flush × straight.</summary>
     public static readonly decimal[] StraightFlushMult =
-        [1.44m, 1.69m, 1.96m, 2.25m, 2.56m, 2.89m, 3.24m, 3.61m];
+        [4.5m, 18m, 40.5m, 72m, 112.5m, 162m, 220.5m, 288m];
 
     private readonly ConcurrentDictionary<string, GameSession> _sessions = new();
 
