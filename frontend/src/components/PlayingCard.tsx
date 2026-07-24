@@ -4,6 +4,8 @@ interface PlayingCardProps {
   card: Card;
   index: number;
   highlight?: 'straight' | 'flush' | 'straightFlush' | null;
+  /** Cycle duration for manic up/down jiggle when part of a bonus run. */
+  bounceMs?: number;
 }
 
 type PipSlot = { x: number; y: number; flip?: boolean };
@@ -107,7 +109,7 @@ function pipLayout(rank: number): PipSlot[] {
   }
 }
 
-export function PlayingCard({ card, index, highlight }: PlayingCardProps) {
+export function PlayingCard({ card, index, highlight, bounceMs }: PlayingCardProps) {
   const red = isRed(card.suit);
   const color = red ? 'red' : 'black';
   const label = card.rankLabel || rankLabel(card.rank);
@@ -115,9 +117,21 @@ export function PlayingCard({ card, index, highlight }: PlayingCardProps) {
   const isFace = card.rank >= 11;
   const isAce = card.rank === 1;
   const pips = pipLayout(card.rank);
+  const bounce = Boolean(highlight && bounceMs);
 
   return (
-    <div className={`playing-card ${highlight ? `hl-${highlight}` : ''}`} style={{ zIndex: index + 1 }}>
+    <div
+      className={`playing-card ${highlight ? `hl-${highlight}` : ''} ${bounce ? 'hl-bounce' : ''}`}
+      style={{
+        zIndex: index + 1,
+        ...(bounce
+          ? {
+              ['--bounce-ms' as string]: `${bounceMs}ms`,
+              ['--bounce-delay' as string]: `${(index % 3) * 35}ms`,
+            }
+          : null),
+      }}
+    >
       <div className={`card-face ${color}`}>
         <div className="card-corner top">
           <span className="corner-rank">{label}</span>

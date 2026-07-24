@@ -603,6 +603,32 @@ body {
   }
 }
 
+/* Manic few-pixel bounce for linked bonus cards; speed via --bounce-ms. */
+.playing-card.hl-bounce {
+  animation: bonus-jiggle var(--bounce-ms, 400ms) ease-in-out infinite;
+  animation-delay: var(--bounce-delay, 0ms);
+  will-change: transform;
+}
+
+@keyframes bonus-jiggle {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(-3px);
+  }
+  75% {
+    transform: translateY(3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .playing-card.hl-bounce {
+    animation: none;
+  }
+}
+
 .setup-panel {
   display: flex;
   flex-direction: column;

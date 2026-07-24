@@ -141,6 +141,22 @@ function highlightFor(index: number, runs: BonusRun[]): Highlight | null {
   return hit;
 }
 
+/** Longest bonus run covering this card — drives bounce speed. */
+function bounceLengthFor(index: number, runs: BonusRun[]): number {
+  let best = 0;
+  for (const run of runs) {
+    if (index < run.start || index > run.end) continue;
+    best = Math.max(best, run.length);
+  }
+  return best;
+}
+
+/** length 3 → ~420ms, length 8 → ~140ms (more linked = manic faster). */
+function bounceDurationMs(length: number): number {
+  const t = Math.min(Math.max(length, 3), 8);
+  return Math.round(420 - (t - 3) * 56);
+}
+
 function slotMultLabel(index: number, roundMultipliers: number[]): string {
   if (index === 0) return '—';
   const m = roundMultipliers[index - 1];
@@ -190,16 +206,27 @@ export function CardSlots({
           <>
             {cards.map((card, i) => {
               const hl = highlightFor(i, runs);
+              const bounceLen = bounceLengthFor(i, runs);
               return (
                 <div key={i} className="cascade-item filled" style={{ zIndex: i + 1 }}>
                   <div className="slot-frame">
                     {newCardIndex === i && i > 0 ? (
                       <DealingCard isNew>
-                        <PlayingCard card={card} index={i} highlight={hl} />
+                        <PlayingCard
+                          card={card}
+                          index={i}
+                          highlight={hl}
+                          bounceMs={bounceLen >= 3 ? bounceDurationMs(bounceLen) : undefined}
+                        />
                       </DealingCard>
                     ) : (
                       <FlippingCard isNew={newCardIndex === i}>
-                        <PlayingCard card={card} index={i} highlight={hl} />
+                        <PlayingCard
+                          card={card}
+                          index={i}
+                          highlight={hl}
+                          bounceMs={bounceLen >= 3 ? bounceDurationMs(bounceLen) : undefined}
+                        />
                       </FlippingCard>
                     )}
                   </div>
