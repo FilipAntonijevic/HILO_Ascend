@@ -179,7 +179,6 @@ export default function App() {
           pendingSlot={pendingSlot}
           showNextSlot={showNextSlot}
         />
-        {state?.message && inRound && <p className="table-msg">{state.message}</p>}
         {error && <p className="error-msg">{error}</p>}
       </section>
 
@@ -237,10 +236,6 @@ export default function App() {
             </button>
           </div>
         )}
-
-        {(state?.phase === 'Lost' || state?.phase === 'Won' || state?.phase === 'MaxReached' || state?.phase === 'Idle') &&
-          !inRound &&
-          state?.message && <p className="hint-msg">{state.message}</p>}
       </footer>
     </div>
   );
