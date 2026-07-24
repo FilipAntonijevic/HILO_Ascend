@@ -253,14 +253,15 @@ body {
 
 .cascade-board {
   --overlap: 0.5;
+  --cascade-step: calc(var(--card-w) * (1 - var(--overlap, 0.5)));
 }
 
 .card-cascade {
   display: flex;
   flex-direction: row;
   align-items: flex-end;
-  justify-content: center;
-  width: max-content;
+  justify-content: flex-start;
+  width: calc(var(--card-w) + (var(--cascade-count, 7) - 1) * var(--cascade-step));
   max-width: 100%;
   perspective: 1000px;
   overflow: visible;
@@ -308,12 +309,10 @@ body {
 .cascade-bonuses {
   position: relative;
   display: block;
-  width: max-content;
+  width: calc(var(--card-w) + (var(--cascade-count, 7) - 1) * var(--cascade-step));
   max-width: 100%;
   min-height: 1.7rem;
   margin: 0 auto;
-  /* Match cascade footprint: first full card + half for each extra item */
-  min-width: calc(var(--card-w) * (1 + (var(--cascade-count, 1) - 1) * var(--overlap, 0.5)));
 }
 
 .cascade-bonuses .bonus-caption {

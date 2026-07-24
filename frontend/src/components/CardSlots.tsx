@@ -67,7 +67,6 @@ export function CardSlots({
   const hot = new Set(indexes);
   const nextIndex = cards.length;
   const showPending = pendingSlot === 0 && cards.length === 0;
-  const itemCount = showPending ? 1 : cards.length + (showNextSlot ? 1 : 0);
 
   const captionLeft = indexes.length > 0 ? Math.min(...indexes) : 0;
   const captionRight = indexes.length > 0 ? Math.max(...indexes) : 0;
@@ -75,7 +74,7 @@ export function CardSlots({
   return (
     <div
       className="slots-board cascade-board"
-      style={{ ['--cascade-count' as string]: Math.max(itemCount, 1) }}
+      style={{ ['--cascade-count' as string]: maxCards }}
     >
       <div className="card-cascade" aria-label="Played cards">
         {showPending ? (
@@ -129,8 +128,8 @@ export function CardSlots({
           <div
             className={`bonus-caption bonus-caption-${kind}`}
             style={{
-              left: `calc(${captionLeft} * var(--card-w) * 0.5)`,
-              width: `calc(${captionRight - captionLeft} * var(--card-w) * 0.5 + var(--card-w))`,
+              left: `calc(${captionLeft} * var(--cascade-step))`,
+              width: `calc(${captionRight - captionLeft} * var(--cascade-step) + var(--card-w))`,
             }}
           >
             {formatBonusMult(raw.multiplier)}
