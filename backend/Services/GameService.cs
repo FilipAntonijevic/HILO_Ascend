@@ -17,9 +17,9 @@ public class GameService
         {
             [BonusKind.Pair] = 1.5m,
             [BonusKind.TwoPair] = 3m,
-            [BonusKind.ThreeOfAKind] = 15m,
-            [BonusKind.Straight] = 20m,
-            [BonusKind.Flush] = 25m,
+            [BonusKind.ThreeOfAKind] = 10m,
+            [BonusKind.Straight] = 15m,
+            [BonusKind.Flush] = 20m,
             [BonusKind.FullHouse] = 50m,
             [BonusKind.FourOfAKind] = 100m,
             [BonusKind.StraightFlush] = 100m,
