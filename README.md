@@ -28,8 +28,8 @@ Open http://localhost:5173
 - Guess **Higher** or **Lower** (same rank = lose).
 - Correct guess multiplies the pot by `m1`…`m6`.
 - After the first win you may **Cash Out** or continue, up to **7 cards**.
-- Bonuses on consecutive cards:
-  - **Flush** (3+) → `f1`…`f8` (orange)
-  - **Straight** up/down (3+) → `s1`…`s8` (light blue); Ace is high (Q-K-A counts, A-2-3 does not)
-  - **Straight flush** → `sf` multipliers (both colors); a longer plain straight beyond the SF still counts
-- **Ace is strongest** (beats King). Same rank always loses.
+- Bonuses use the **best poker hand** from up to 5 of the played cards (Ace high):
+  - Pair ×2 · Two pair ×5 · Three of a kind ×10
+  - Straight ×20 · Flush ×25 · Full house ×50
+  - Four of a kind (poker) ×250 · Straight flush ×100 · Royal flush ×500
+- Bonus mult applies when the hand **upgrades**; losing on a card does not award a new hand.

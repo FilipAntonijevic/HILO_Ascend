@@ -317,25 +317,39 @@ body {
   white-space: nowrap;
 }
 
-.bonus-caption-flush {
+.bonus-caption-flush,
+.bonus-caption-Flush {
   color: #ffb074;
   background: rgba(240, 160, 90, 0.14);
   text-shadow: 0 0 12px rgba(240, 160, 90, 0.45);
 }
 
-.bonus-caption-straight {
+.bonus-caption-straight,
+.bonus-caption-Straight {
   color: #9fdfff;
   background: rgba(126, 200, 227, 0.14);
   text-shadow: 0 0 12px rgba(126, 200, 227, 0.45);
 }
 
-.bonus-caption-straightFlush {
+.bonus-caption-straightFlush,
+.bonus-caption-StraightFlush,
+.bonus-caption-RoyalFlush {
   background: linear-gradient(90deg, rgba(126, 200, 227, 0.18), rgba(240, 160, 90, 0.18));
   background-clip: padding-box;
   color: #fff0d6;
   text-shadow:
     0 0 10px rgba(126, 200, 227, 0.55),
     0 0 10px rgba(240, 160, 90, 0.55);
+}
+
+.bonus-caption-Pair,
+.bonus-caption-TwoPair,
+.bonus-caption-ThreeOfAKind,
+.bonus-caption-FullHouse,
+.bonus-caption-FourOfAKind {
+  color: #ffe08a;
+  background: rgba(232, 195, 90, 0.14);
+  text-shadow: 0 0 12px rgba(232, 195, 90, 0.45);
 }
 
 .slot-frame {
@@ -571,6 +585,13 @@ body {
 
 .black {
   color: #1a1a1a;
+}
+
+.playing-card.hl-pair .card-face {
+  box-shadow:
+    0 0 0 3px #e8c35a,
+    0 0 22px rgba(232, 195, 90, 0.55),
+    0 8px 18px rgba(0, 0, 0, 0.28);
 }
 
 .playing-card.hl-straight .card-face {
@@ -912,6 +933,43 @@ body {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+.bonus-pair,
+.bonus-two-pair,
+.bonus-trips,
+.bonus-full-house,
+.bonus-quads {
+  background: rgba(45, 38, 12, 0.92);
+  border: 2px solid #e8c35a;
+  color: #ffe08a;
+  box-shadow: 0 0 28px rgba(232, 195, 90, 0.45);
+}
+
+.bonus-pair .bonus-ring,
+.bonus-two-pair .bonus-ring,
+.bonus-trips .bonus-ring,
+.bonus-full-house .bonus-ring,
+.bonus-quads .bonus-ring {
+  background: conic-gradient(from 0deg, transparent, #e8c35a, transparent);
+}
+
+.bonus-royal {
+  background: rgba(30, 28, 20, 0.94);
+  border: 2px solid transparent;
+  background-image:
+    linear-gradient(rgba(30, 28, 20, 0.94), rgba(30, 28, 20, 0.94)),
+    linear-gradient(120deg, #ffe08a, var(--accent-2), var(--accent));
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  color: #fff;
+  box-shadow:
+    0 0 28px rgba(255, 224, 138, 0.55),
+    0 0 28px rgba(126, 200, 227, 0.45);
+}
+
+.bonus-royal .bonus-ring {
+  background: conic-gradient(from 0deg, #ffe08a, var(--accent-2), var(--accent), #ffe08a);
 }
 
 /* —— Mobile —— */

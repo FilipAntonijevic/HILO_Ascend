@@ -36,12 +36,24 @@ public record Card(int Rank, Suit Suit)
 
 public enum BonusKind
 {
-    Flush,
-    Straight,
-    StraightFlush
+    Pair = 1,
+    TwoPair = 2,
+    ThreeOfAKind = 3,
+    Straight = 4,
+    Flush = 5,
+    FullHouse = 6,
+    FourOfAKind = 7,
+    StraightFlush = 8,
+    RoyalFlush = 9
 }
 
-public record BonusHit(BonusKind Kind, int Length, int Tier, decimal Multiplier);
+public record BonusHit(
+    BonusKind Kind,
+    int Length,
+    int Tier,
+    decimal Multiplier,
+    List<int> CardIndexes
+);
 
 public enum Guess
 {
@@ -61,9 +73,7 @@ public enum GamePhase
 
 public record MultiplierConfig(
     decimal[] RoundMultipliers,
-    decimal[] FlushMultipliers,
-    decimal[] StraightMultipliers,
-    decimal[] StraightFlushMultipliers
+    IReadOnlyDictionary<string, decimal> HandMultipliers
 );
 
 public class GameState

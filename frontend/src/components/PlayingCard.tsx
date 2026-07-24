@@ -3,7 +3,7 @@ import { isRed, rankLabel, suitSymbol, type Card } from '../api';
 interface PlayingCardProps {
   card: Card;
   index: number;
-  highlight?: 'straight' | 'flush' | 'straightFlush' | null;
+  highlight?: 'straight' | 'flush' | 'straightFlush' | 'pair' | null;
   /** Cycle duration for manic up/down jiggle when part of a bonus run. */
   bounceMs?: number;
 }
