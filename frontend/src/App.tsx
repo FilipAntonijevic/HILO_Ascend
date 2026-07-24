@@ -73,7 +73,7 @@ export default function App() {
     setBalanceInput(String(next.balance));
     if (animateCard && next.cards.length > 0) {
       setNewCardIndex(next.cards.length - 1);
-      window.setTimeout(() => setNewCardIndex(null), 700);
+      window.setTimeout(() => setNewCardIndex(null), 900);
     }
     if (next.lastBonuses?.length) {
       setFlashBonuses(next.lastBonuses);
@@ -120,8 +120,8 @@ export default function App() {
 
   /** Face-down only while waiting for the first Start. */
   const pendingSlot = canStart && cardCount === 0 ? 0 : null;
-  /** Only the next empty seat (to the right), not a full predetermined row. */
-  const showNextSlot = inRound && cardCount > 0 && cardCount < maxCards;
+  /** Only the next empty seat (to the right), hidden while a new card is sliding in. */
+  const showNextSlot = inRound && cardCount > 0 && cardCount < maxCards && newCardIndex === null;
 
   return (
     <div className={`app-shell ${mobile ? 'mobile' : 'desktop'}`}>

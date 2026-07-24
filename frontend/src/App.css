@@ -260,16 +260,23 @@ body {
   width: max-content;
   max-width: 100%;
   perspective: 1000px;
+  overflow: visible;
 }
 
 .cascade-item {
   flex: 0 0 var(--card-w);
   width: var(--card-w);
   position: relative;
+  overflow: visible;
 }
 
 .cascade-item + .cascade-item {
   margin-left: calc(var(--card-w) * -1 * var(--overlap, 0.5));
+}
+
+/* Next empty seat sits fully to the right — no overlap with the last card. */
+.cascade-item.filled + .cascade-item.next {
+  margin-left: 0.4rem;
 }
 
 .bonus-captions {
@@ -884,7 +891,7 @@ body {
 /* —— Mobile —— */
 .app-shell.mobile {
   --page-pad: 0.75rem;
-  --card-w: 66px;
+  --card-w: 71px;
   --card-h: 110px;
   padding: 0.75rem var(--page-pad) 0;
   max-width: 100%;

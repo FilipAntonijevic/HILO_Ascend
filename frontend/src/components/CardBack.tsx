@@ -35,7 +35,7 @@ export function FlippingCard({
   );
 }
 
-/** Arrive from the side + flip at once (Higher/Lower deals). */
+/** Arrive on the open seat to the right, then slide onto the previous card. */
 export function DealingCard({
   children,
   isNew,
@@ -46,9 +46,24 @@ export function DealingCard({
   return (
     <motion.div
       className="flip-wrap"
-      initial={isNew ? { rotateY: 180, x: 40, opacity: 0, scale: 0.92 } : false}
+      initial={
+        isNew
+          ? {
+              rotateY: 180,
+              // Start where the open seat was (fully to the right of previous card).
+              x: '58%',
+              opacity: 0.9,
+              scale: 0.97,
+            }
+          : false
+      }
       animate={{ rotateY: 0, x: 0, opacity: 1, scale: 1 }}
-      transition={{ type: 'spring', stiffness: 240, damping: 20 }}
+      transition={{
+        rotateY: { type: 'spring', stiffness: 260, damping: 22 },
+        x: { type: 'spring', stiffness: 220, damping: 24, delay: 0.12 },
+        opacity: { duration: 0.2 },
+        scale: { type: 'spring', stiffness: 240, damping: 20 },
+      }}
     >
       <div className="flip-face flip-front">{children}</div>
       <div className="flip-face flip-back">
