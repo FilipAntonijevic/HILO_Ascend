@@ -19,6 +19,7 @@
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html,
@@ -764,6 +765,15 @@ body {
   justify-content: center;
   gap: 0.15rem;
   transition: transform 0.15s ease, filter 0.15s ease, opacity 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  outline: none;
+}
+
+.btn:focus,
+.btn:focus-visible {
+  outline: none;
 }
 
 .btn:hover:not(:disabled) {
