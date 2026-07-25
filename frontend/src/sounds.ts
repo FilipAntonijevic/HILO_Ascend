@@ -49,11 +49,35 @@ function playTones(tones: Tone[], master = 0.18): void {
   }
 }
 
-function makeNoiseBuffer(ac: AudioContext, dur: number): AudioBuffer {
+function makeNoiseBuffer(ac: AudioContext, dur: number, kind: 'white' | 'pink' = 'white'): AudioBuffer {
   const n = Math.max(1, Math.floor(ac.sampleRate * dur));
   const buffer = ac.createBuffer(1, n, ac.sampleRate);
   const data = buffer.getChannelData(0);
-  for (let i = 0; i < n; i++) data[i] = Math.random() * 2 - 1;
+  if (kind === 'white') {
+    for (let i = 0; i < n; i++) data[i] = Math.random() * 2 - 1;
+    return buffer;
+  }
+
+  // Paul Kellet pink-noise approximation — warmer, more paper-like than white.
+  let b0 = 0;
+  let b1 = 0;
+  let b2 = 0;
+  let b3 = 0;
+  let b4 = 0;
+  let b5 = 0;
+  let b6 = 0;
+  for (let i = 0; i < n; i++) {
+    const w = Math.random() * 2 - 1;
+    b0 = 0.99886 * b0 + w * 0.0555179;
+    b1 = 0.99332 * b1 + w * 0.0750759;
+    b2 = 0.969 * b2 + w * 0.153852;
+    b3 = 0.8665 * b3 + w * 0.3104856;
+    b4 = 0.55 * b4 + w * 0.5329522;
+    b5 = -0.7616 * b5 - w * 0.016898;
+    const pink = b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362;
+    b6 = w * 0.115926;
+    data[i] = pink * 0.11;
+  }
   return buffer;
 }
 
@@ -77,70 +101,148 @@ function noiseBurst(dur: number, gainLevel = 0.12, filterFreq = 1200): void {
   src.stop(now + dur + 0.02);
 }
 
-/** Paper/card whoosh with a soft slap — reads as a playing-card flip. */
+/**
+ * Playing-card flip: fingertip flick → air/paper whoosh → crisp flap → soft felt land.
+ * Slight randomization each play so repeats don't sound identical.
+ */
 function playCardFlip(): void {
   const ac = getCtx();
   if (!ac) return;
   const now = ac.currentTime;
+  const rate = 0.96 + Math.random() * 0.08;
+  const master = 0.9 + Math.random() * 0.15;
 
-  // Air / paper rustle while the card turns.
+  // 1) Nail / fingertip flick — sharp high transient.
   {
     const src = ac.createBufferSource();
-    src.buffer = makeNoiseBuffer(ac, 0.16);
-    const bp = ac.createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.Q.value = 0.55;
-    bp.frequency.setValueAtTime(3200, now);
-    bp.frequency.exponentialRampToValueAtTime(900, now + 0.14);
+    src.buffer = makeNoiseBuffer(ac, 0.035);
     const hp = ac.createBiquadFilter();
     hp.type = 'highpass';
-    hp.frequency.value = 600;
-    const gain = ac.createGain();
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.16, now + 0.018);
-    gain.gain.exponentialRampToValueAtTime(0.07, now + 0.07);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
-    src.connect(bp);
-    bp.connect(hp);
-    hp.connect(gain);
-    gain.connect(ac.destination);
-    src.start(now);
-    src.stop(now + 0.17);
-  }
-
-  // Soft edge snap as the card finishes the flip.
-  {
-    const t0 = now + 0.07;
-    const src = ac.createBufferSource();
-    src.buffer = makeNoiseBuffer(ac, 0.05);
+    hp.frequency.value = 2800 * rate;
     const bp = ac.createBiquadFilter();
     bp.type = 'bandpass';
-    bp.frequency.value = 1400;
-    bp.Q.value = 2.2;
+    bp.frequency.value = 5200 * rate;
+    bp.Q.value = 3.5;
     const gain = ac.createGain();
-    gain.gain.setValueAtTime(0.14, t0);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.045);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.22 * master, now + 0.002);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.028);
+    src.connect(hp);
+    hp.connect(bp);
+    bp.connect(gain);
+    gain.connect(ac.destination);
+    src.start(now);
+    src.stop(now + 0.04);
+  }
+
+  // 2) Card body whoosh — pink noise with falling band + light flutter.
+  {
+    const t0 = now + 0.012;
+    const dur = 0.14;
+    const src = ac.createBufferSource();
+    src.buffer = makeNoiseBuffer(ac, dur + 0.02, 'pink');
+
+    const bp = ac.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.Q.value = 0.7;
+    bp.frequency.setValueAtTime(2800 * rate, t0);
+    bp.frequency.exponentialRampToValueAtTime(700 * rate, t0 + dur);
+
+    const lp = ac.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(6500, t0);
+    lp.frequency.exponentialRampToValueAtTime(1800, t0 + dur);
+
+    // Amplitude flutter ≈ card spinning through air.
+    const lfo = ac.createOscillator();
+    const lfoGain = ac.createGain();
+    lfo.type = 'sine';
+    lfo.frequency.value = 38 + Math.random() * 10;
+    lfoGain.gain.value = 0.45;
+    const base = ac.createGain();
+    base.gain.setValueAtTime(0.0001, t0);
+    base.gain.exponentialRampToValueAtTime(0.2 * master, t0 + 0.015);
+    base.gain.linearRampToValueAtTime(0.12 * master, t0 + 0.06);
+    base.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+
+    const flutter = ac.createGain();
+    flutter.gain.value = 1;
+    lfo.connect(lfoGain);
+    lfoGain.connect(flutter.gain);
+
+    src.connect(bp);
+    bp.connect(lp);
+    lp.connect(flutter);
+    flutter.connect(base);
+    base.connect(ac.destination);
+    src.start(t0);
+    src.stop(t0 + dur + 0.02);
+    lfo.start(t0);
+    lfo.stop(t0 + dur + 0.02);
+  }
+
+  // 3) Crisp paper/plastic flap as the face finishes turning.
+  {
+    const t0 = now + 0.085 + Math.random() * 0.012;
+    const src = ac.createBufferSource();
+    src.buffer = makeNoiseBuffer(ac, 0.04, 'pink');
+    const bp = ac.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(1900 * rate, t0);
+    bp.frequency.exponentialRampToValueAtTime(1100 * rate, t0 + 0.03);
+    bp.Q.value = 4.5;
+    const gain = ac.createGain();
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.28 * master, t0 + 0.0015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.038);
     src.connect(bp);
     bp.connect(gain);
     gain.connect(ac.destination);
     src.start(t0);
-    src.stop(t0 + 0.06);
+    src.stop(t0 + 0.045);
+
+    // Short harmonic "tick" of stiff card stock.
+    const osc = ac.createOscillator();
+    const og = ac.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(980 * rate, t0);
+    osc.frequency.exponentialRampToValueAtTime(420 * rate, t0 + 0.04);
+    og.gain.setValueAtTime(0.07 * master, t0);
+    og.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.045);
+    osc.connect(og);
+    og.connect(ac.destination);
+    osc.start(t0);
+    osc.stop(t0 + 0.05);
   }
 
-  // Quiet body thud on the table.
+  // 4) Soft felt / table land under the flap.
   {
-    const t0 = now + 0.085;
+    const t0 = now + 0.1;
     const osc = ac.createOscillator();
     const gain = ac.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(180, t0);
-    osc.frequency.exponentialRampToValueAtTime(70, t0 + 0.07);
-    gain.gain.setValueAtTime(0.08, t0);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.08);
+    osc.frequency.setValueAtTime(160 * rate, t0);
+    osc.frequency.exponentialRampToValueAtTime(55 * rate, t0 + 0.09);
+    gain.gain.setValueAtTime(0.09 * master, t0);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.1);
     osc.connect(gain);
     gain.connect(ac.destination);
     osc.start(t0);
-    osc.stop(t0 + 0.09);
+    osc.stop(t0 + 0.11);
+
+    const src = ac.createBufferSource();
+    src.buffer = makeNoiseBuffer(ac, 0.06, 'pink');
+    const lp = ac.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 450;
+    const ng = ac.createGain();
+    ng.gain.setValueAtTime(0.06 * master, t0);
+    ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.07);
+    src.connect(lp);
+    lp.connect(ng);
+    ng.connect(ac.destination);
+    src.start(t0);
+    src.stop(t0 + 0.08);
   }
 }
 
