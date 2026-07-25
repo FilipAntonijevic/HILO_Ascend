@@ -84,6 +84,12 @@ export default function App() {
       setFlashBonuses(next.lastBonuses);
       window.setTimeout(() => sfx.bonus(), animateCard ? 220 : 40);
     }
+
+    // Full-board clear (last card survived) — special win, after flip / bonus.
+    if (next.phase === 'MaxReached') {
+      const delay = next.lastBonuses?.length ? (animateCard ? 520 : 200) : animateCard ? 320 : 80;
+      window.setTimeout(() => sfx.maxWin(), delay);
+    }
   }
 
   async function commitBalance() {

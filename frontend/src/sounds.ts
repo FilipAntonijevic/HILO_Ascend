@@ -288,21 +288,84 @@ function coinClink(ac: AudioContext, when: number, baseFreq: number, gainLevel: 
 }
 
 /** Cascading coin jingle for cash out. */
-function playCoinJingle(): void {
+function playCoinJingle(intensity = 1): void {
   const ac = getCtx();
   if (!ac) return;
   const now = ac.currentTime;
-  const bases = [2650, 3100, 2480, 3400, 2900, 3600, 2750, 3250];
+  const bases = [2650, 3100, 2480, 3400, 2900, 3600, 2750, 3250, 3000, 3500];
+  const count = Math.min(bases.length, Math.round(8 * intensity));
 
-  for (let i = 0; i < bases.length; i++) {
+  for (let i = 0; i < count; i++) {
     const jitter = Math.random() * 0.018;
-    const when = now + i * 0.038 + jitter;
-    const level = 0.07 * (1 - i * 0.07);
+    const when = now + i * (0.034 / Math.min(intensity, 1.4)) + jitter;
+    const level = 0.07 * intensity * (1 - i * 0.06);
     coinClink(ac, when, bases[i]! * (0.97 + Math.random() * 0.06), Math.max(level, 0.02));
   }
 
   // Soft pouch / pile settle under the jingle.
-  noiseBurst(0.12, 0.035, 900);
+  noiseBurst(0.12, 0.035 * intensity, 900);
+}
+
+/**
+ * Special win for clearing all 7 cards — triumphant rise + shimmer + big coin rain.
+ * Distinct from a normal mid-round cash out.
+ */
+function playMaxWin(): void {
+  const ac = getCtx();
+  if (!ac) return;
+  const now = ac.currentTime;
+
+  // Ascending major fanfare (C5 → E5 → G5 → C6 → E6).
+  const fanfare = [
+    { f: 523.25, d: 0, g: 0.55, dur: 0.16 },
+    { f: 659.25, d: 0.1, g: 0.6, dur: 0.16 },
+    { f: 783.99, d: 0.2, g: 0.65, dur: 0.16 },
+    { f: 1046.5, d: 0.32, g: 0.7, dur: 0.22 },
+    { f: 1318.5, d: 0.48, g: 0.55, dur: 0.35 },
+  ];
+
+  for (const n of fanfare) {
+    for (const [type, mul, gMul] of [
+      ['sine', 1, 1],
+      ['triangle', 2, 0.35],
+      ['sine', 3, 0.18],
+    ] as const) {
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(n.f * mul, now + n.d);
+      const g = Math.max(n.g * gMul * 0.2, 0.001);
+      gain.gain.setValueAtTime(0.0001, now + n.d);
+      gain.gain.exponentialRampToValueAtTime(g, now + n.d + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + n.d + n.dur);
+      osc.connect(gain);
+      gain.connect(ac.destination);
+      osc.start(now + n.d);
+      osc.stop(now + n.d + n.dur + 0.03);
+    }
+  }
+
+  // Bright sparkle / shimmer over the top note.
+  {
+    const t0 = now + 0.45;
+    for (let i = 0; i < 7; i++) {
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      const when = t0 + i * 0.045;
+      osc.type = 'sine';
+      osc.frequency.value = 2400 + i * 280 + Math.random() * 120;
+      gain.gain.setValueAtTime(0.0001, when);
+      gain.gain.exponentialRampToValueAtTime(0.045, when + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, when + 0.12);
+      osc.connect(gain);
+      gain.connect(ac.destination);
+      osc.start(when);
+      osc.stop(when + 0.14);
+    }
+  }
+
+  // Bigger coin rain than a normal cash out.
+  window.setTimeout(() => playCoinJingle(1.45), 280);
 }
 
 export const sfx = {
@@ -322,6 +385,11 @@ export const sfx = {
 
   cashOut() {
     playCoinJingle();
+  },
+
+  /** Cleared the full board (last card win) — bigger than a mid-round cash out. */
+  maxWin() {
+    playMaxWin();
   },
 
   bust() {
