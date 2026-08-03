@@ -11,6 +11,7 @@
   --ok: #3ecf8e;
   --card-w: 132px;
   --card-h: 185px;
+  --hand-lift: 16px;
   --page-pad: 1.5rem;
   --font-display: 'Fraunces', 'Georgia', serif;
   --font-body: 'DM Sans', 'Trebuchet MS', sans-serif;
@@ -18,6 +19,7 @@
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html,
@@ -198,7 +200,8 @@ body {
   padding: 0.55rem 1.5rem 0.85rem;
   overflow: hidden;
   min-height: 0;
-  height: calc(var(--card-h) + 6.5rem);
+  /* Extra headroom so lifted hand cards are not clipped. */
+  height: calc(var(--card-h) + 6.5rem + var(--hand-lift, 16px));
   flex: 0 0 auto;
 }
 
@@ -246,18 +249,20 @@ body {
   gap: 0.45rem;
   width: 100%;
   align-items: center;
+  padding-top: var(--hand-lift, 16px);
 }
 
 .cascade-board {
   --overlap: 0.5;
+  --cascade-step: calc(var(--card-w) * (1 - var(--overlap, 0.5)));
 }
 
 .card-cascade {
   display: flex;
   flex-direction: row;
   align-items: flex-end;
-  justify-content: center;
-  width: max-content;
+  justify-content: flex-start;
+  width: calc(var(--card-w) + (var(--cascade-count, 7) - 1) * var(--cascade-step));
   max-width: 100%;
   perspective: 1000px;
   overflow: visible;
@@ -268,30 +273,19 @@ body {
   width: var(--card-w);
   position: relative;
   overflow: visible;
-}
-
-.cascade-item.hand-hot {
-  animation: hand-hot-jiggle var(--bounce-ms, 400ms) ease-in-out infinite;
-  animation-delay: var(--bounce-delay, 0ms);
+  transform: translateY(0);
+  transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;
 }
 
-@keyframes hand-hot-jiggle {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  25% {
-    transform: translateY(calc(-1 * var(--bounce-amp, 3px)));
-  }
-  75% {
-    transform: translateY(var(--bounce-amp, 3px));
-  }
+/* Highlighted hand cards sit slightly above the cascade; removing the class lowers them. */
+.cascade-item.hand-hot {
+  transform: translateY(calc(-1 * var(--hand-lift, 16px)));
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cascade-item.hand-hot {
-    animation: none;
+  .cascade-item {
+    transition: none;
   }
 }
 
@@ -316,12 +310,10 @@ body {
 .cascade-bonuses {
   position: relative;
   display: block;
-  width: max-content;
+  width: calc(var(--card-w) + (var(--cascade-count, 7) - 1) * var(--cascade-step));
   max-width: 100%;
   min-height: 1.7rem;
   margin: 0 auto;
-  /* Match cascade footprint: first full card + half for each extra item */
-  min-width: calc(var(--card-w) * (1 + (var(--cascade-count, 1) - 1) * var(--overlap, 0.5)));
 }
 
 .cascade-bonuses .bonus-caption {
@@ -342,39 +334,65 @@ body {
   white-space: nowrap;
 }
 
-.bonus-caption-flush,
-.bonus-caption-Flush {
-  color: #ffb074;
-  background: rgba(240, 160, 90, 0.14);
-  text-shadow: 0 0 12px rgba(240, 160, 90, 0.45);
+.bonus-caption-Pair {
+  color: #d4bc78;
+  background: rgba(196, 163, 90, 0.12);
+  text-shadow: 0 0 10px rgba(196, 163, 90, 0.35);
+}
+
+.bonus-caption-TwoPair {
+  color: #f0a05a;
+  background: rgba(224, 138, 60, 0.14);
+  text-shadow: 0 0 11px rgba(224, 138, 60, 0.4);
+}
+
+.bonus-caption-ThreeOfAKind {
+  color: #ffc14d;
+  background: rgba(255, 176, 32, 0.16);
+  text-shadow: 0 0 12px rgba(255, 176, 32, 0.5);
 }
 
 .bonus-caption-straight,
 .bonus-caption-Straight {
-  color: #9fdfff;
-  background: rgba(126, 200, 227, 0.14);
-  text-shadow: 0 0 12px rgba(126, 200, 227, 0.45);
+  color: #7adfff;
+  background: rgba(78, 196, 240, 0.16);
+  text-shadow: 0 0 13px rgba(78, 196, 240, 0.55);
+}
+
+.bonus-caption-flush,
+.bonus-caption-Flush {
+  color: #ff8f6e;
+  background: rgba(255, 106, 69, 0.16);
+  text-shadow: 0 0 14px rgba(255, 106, 69, 0.55);
+}
+
+.bonus-caption-FullHouse {
+  color: #5fffc0;
+  background: rgba(46, 240, 160, 0.16);
+  text-shadow: 0 0 15px rgba(46, 240, 160, 0.6);
+}
+
+.bonus-caption-FourOfAKind {
+  color: #d6ff66;
+  background: rgba(200, 255, 46, 0.16);
+  text-shadow: 0 0 16px rgba(200, 255, 46, 0.65);
 }
 
 .bonus-caption-straightFlush,
-.bonus-caption-StraightFlush,
-.bonus-caption-RoyalFlush {
-  background: linear-gradient(90deg, rgba(126, 200, 227, 0.18), rgba(240, 160, 90, 0.18));
-  background-clip: padding-box;
-  color: #fff0d6;
+.bonus-caption-StraightFlush {
+  color: #9ffff2;
+  background: linear-gradient(90deg, rgba(32, 240, 224, 0.18), rgba(255, 229, 102, 0.14));
   text-shadow:
-    0 0 10px rgba(126, 200, 227, 0.55),
-    0 0 10px rgba(240, 160, 90, 0.55);
+    0 0 14px rgba(32, 240, 224, 0.65),
+    0 0 10px rgba(255, 229, 102, 0.45);
 }
 
-.bonus-caption-Pair,
-.bonus-caption-TwoPair,
-.bonus-caption-ThreeOfAKind,
-.bonus-caption-FullHouse,
-.bonus-caption-FourOfAKind {
-  color: #ffe08a;
-  background: rgba(232, 195, 90, 0.14);
-  text-shadow: 0 0 12px rgba(232, 195, 90, 0.45);
+.bonus-caption-RoyalFlush {
+  color: #fff8d6;
+  background: linear-gradient(90deg, rgba(255, 248, 214, 0.2), rgba(255, 214, 90, 0.16));
+  text-shadow:
+    0 0 16px rgba(255, 248, 214, 0.85),
+    0 0 12px rgba(255, 214, 90, 0.55);
 }
 
 .slot-frame {
@@ -512,6 +530,7 @@ body {
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
   position: relative;
   overflow: hidden;
+  transition: box-shadow 0.32s ease;
 }
 
 .card-face.red {
@@ -612,66 +631,87 @@ body {
   color: #1a1a1a;
 }
 
-.playing-card.hl-pair .card-face {
+/* Hand highlight ladder: weaker = softer, stronger = brighter / more vivid. */
+.playing-card.hl-Pair .card-face {
   box-shadow:
-    0 0 0 3px #e8c35a,
-    0 0 22px rgba(232, 195, 90, 0.55),
+    0 0 0 2px #c4a35a,
+    0 0 14px rgba(196, 163, 90, 0.35),
     0 8px 18px rgba(0, 0, 0, 0.28);
 }
 
-.playing-card.hl-straight .card-face {
+.playing-card.hl-TwoPair .card-face {
   box-shadow:
-    0 0 0 3px var(--accent-2),
-    0 0 24px rgba(126, 200, 227, 0.65),
+    0 0 0 2px #e08a3c,
+    0 0 18px rgba(224, 138, 60, 0.45),
     0 8px 18px rgba(0, 0, 0, 0.28);
 }
 
-.playing-card.hl-flush .card-face {
+.playing-card.hl-ThreeOfAKind .card-face {
   box-shadow:
-    0 0 0 3px var(--accent),
-    0 0 24px rgba(240, 160, 90, 0.65),
+    0 0 0 3px #ffb020,
+    0 0 22px rgba(255, 176, 32, 0.55),
     0 8px 18px rgba(0, 0, 0, 0.28);
 }
 
-.playing-card.hl-straightFlush .card-face {
+.playing-card.hl-Straight .card-face {
   box-shadow:
-    0 0 0 3px var(--accent-2),
-    0 0 0 6px var(--accent),
-    0 0 28px rgba(126, 200, 227, 0.55),
-    0 0 28px rgba(240, 160, 90, 0.55),
+    0 0 0 3px #4ec4f0,
+    0 0 24px rgba(78, 196, 240, 0.6),
     0 8px 18px rgba(0, 0, 0, 0.28);
-  animation: sf-pulse 1.2s ease-in-out infinite;
 }
 
-@keyframes sf-pulse {
+.playing-card.hl-Flush .card-face {
+  box-shadow:
+    0 0 0 3px #ff6a45,
+    0 0 26px rgba(255, 106, 69, 0.65),
+    0 8px 18px rgba(0, 0, 0, 0.28);
+}
+
+.playing-card.hl-FullHouse .card-face {
+  box-shadow:
+    0 0 0 3px #2ef0a0,
+    0 0 28px rgba(46, 240, 160, 0.7),
+    0 8px 18px rgba(0, 0, 0, 0.28);
+}
+
+.playing-card.hl-FourOfAKind .card-face {
+  box-shadow:
+    0 0 0 3px #c8ff2e,
+    0 0 30px rgba(200, 255, 46, 0.75),
+    0 8px 18px rgba(0, 0, 0, 0.28);
+  filter: brightness(1.04);
+}
+
+.playing-card.hl-StraightFlush .card-face {
+  box-shadow:
+    0 0 0 3px #20f0e0,
+    0 0 0 6px rgba(255, 229, 102, 0.85),
+    0 0 32px rgba(32, 240, 224, 0.7),
+    0 0 28px rgba(255, 229, 102, 0.45),
+    0 8px 18px rgba(0, 0, 0, 0.28);
+  animation: hand-glow-pulse 1.15s ease-in-out infinite;
+}
+
+.playing-card.hl-RoyalFlush .card-face {
+  box-shadow:
+    0 0 0 3px #fff8d6,
+    0 0 0 7px rgba(255, 214, 90, 0.9),
+    0 0 36px rgba(255, 248, 214, 0.9),
+    0 0 28px rgba(255, 214, 90, 0.65),
+    0 8px 18px rgba(0, 0, 0, 0.28);
+  animation: hand-glow-pulse-strong 1s ease-in-out infinite;
+  filter: brightness(1.08);
+}
+
+@keyframes hand-glow-pulse {
   50% {
-    filter: brightness(1.08);
+    filter: brightness(1.07);
   }
 }
 
-/* Manic few-pixel bounce for linked bonus cards; speed via --bounce-ms. */
-.playing-card.hl-bounce {
-  animation: bonus-jiggle var(--bounce-ms, 400ms) ease-in-out infinite;
-  animation-delay: var(--bounce-delay, 0ms);
-  will-change: transform;
-}
-
-@keyframes bonus-jiggle {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  25% {
-    transform: translateY(-3px);
-  }
-  75% {
-    transform: translateY(3px);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .playing-card.hl-bounce {
-    animation: none;
+@keyframes hand-glow-pulse-strong {
+  50% {
+    filter: brightness(1.14);
   }
 }
 
@@ -725,6 +765,15 @@ body {
   justify-content: center;
   gap: 0.15rem;
   transition: transform 0.15s ease, filter 0.15s ease, opacity 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  outline: none;
+}
+
+.btn:focus,
+.btn:focus-visible {
+  outline: none;
 }
 
 .btn:hover:not(:disabled) {
@@ -913,88 +962,124 @@ body {
   font-weight: 700;
 }
 
+.bonus-pair {
+  background: rgba(40, 34, 18, 0.92);
+  border: 2px solid #c4a35a;
+  color: #d4bc78;
+  box-shadow: 0 0 20px rgba(196, 163, 90, 0.35);
+}
+
+.bonus-pair .bonus-ring {
+  background: conic-gradient(from 0deg, transparent, #c4a35a, transparent);
+}
+
+.bonus-two-pair {
+  background: rgba(48, 28, 14, 0.92);
+  border: 2px solid #e08a3c;
+  color: #f0a05a;
+  box-shadow: 0 0 24px rgba(224, 138, 60, 0.45);
+}
+
+.bonus-two-pair .bonus-ring {
+  background: conic-gradient(from 0deg, transparent, #e08a3c, transparent);
+}
+
+.bonus-trips {
+  background: rgba(52, 34, 8, 0.92);
+  border: 2px solid #ffb020;
+  color: #ffc14d;
+  box-shadow: 0 0 28px rgba(255, 176, 32, 0.55);
+}
+
+.bonus-trips .bonus-ring {
+  background: conic-gradient(from 0deg, transparent, #ffb020, transparent);
+}
+
 .bonus-straight {
-  background: rgba(20, 50, 70, 0.9);
-  border: 2px solid var(--accent-2);
-  color: var(--accent-2);
-  box-shadow: 0 0 30px rgba(126, 200, 227, 0.45);
+  background: rgba(12, 40, 55, 0.92);
+  border: 2px solid #4ec4f0;
+  color: #7adfff;
+  box-shadow: 0 0 30px rgba(78, 196, 240, 0.55);
 }
 
 .bonus-straight .bonus-ring {
-  background: conic-gradient(from 0deg, transparent, var(--accent-2), transparent);
+  background: conic-gradient(from 0deg, transparent, #4ec4f0, transparent);
 }
 
 .bonus-flush {
-  background: rgba(60, 35, 15, 0.9);
-  border: 2px solid var(--accent);
-  color: var(--accent);
-  box-shadow: 0 0 30px rgba(240, 160, 90, 0.45);
+  background: rgba(55, 22, 14, 0.92);
+  border: 2px solid #ff6a45;
+  color: #ff8f6e;
+  box-shadow: 0 0 30px rgba(255, 106, 69, 0.6);
 }
 
 .bonus-flush .bonus-ring {
-  background: conic-gradient(from 0deg, transparent, var(--accent), transparent);
+  background: conic-gradient(from 0deg, transparent, #ff6a45, transparent);
+}
+
+.bonus-full-house {
+  background: rgba(10, 42, 30, 0.92);
+  border: 2px solid #2ef0a0;
+  color: #5fffc0;
+  box-shadow: 0 0 32px rgba(46, 240, 160, 0.65);
+}
+
+.bonus-full-house .bonus-ring {
+  background: conic-gradient(from 0deg, transparent, #2ef0a0, transparent);
+}
+
+.bonus-quads {
+  background: rgba(28, 40, 8, 0.92);
+  border: 2px solid #c8ff2e;
+  color: #d6ff66;
+  box-shadow: 0 0 34px rgba(200, 255, 46, 0.7);
+}
+
+.bonus-quads .bonus-ring {
+  background: conic-gradient(from 0deg, transparent, #c8ff2e, transparent);
 }
 
 .bonus-straight-flush {
-  background: rgba(30, 28, 20, 0.92);
+  background: rgba(12, 36, 34, 0.94);
   border: 2px solid transparent;
   background-image:
-    linear-gradient(rgba(30, 28, 20, 0.92), rgba(30, 28, 20, 0.92)),
-    linear-gradient(120deg, var(--accent-2), var(--accent));
+    linear-gradient(rgba(12, 36, 34, 0.94), rgba(12, 36, 34, 0.94)),
+    linear-gradient(120deg, #20f0e0, #ffe566);
   background-origin: border-box;
   background-clip: padding-box, border-box;
-  color: #fff;
+  color: #9ffff2;
   box-shadow:
-    0 0 24px rgba(126, 200, 227, 0.5),
-    0 0 24px rgba(240, 160, 90, 0.5);
+    0 0 28px rgba(32, 240, 224, 0.65),
+    0 0 24px rgba(255, 229, 102, 0.45);
 }
 
 .bonus-straight-flush .bonus-ring {
-  background: conic-gradient(from 0deg, var(--accent-2), var(--accent), var(--accent-2));
+  background: conic-gradient(from 0deg, #20f0e0, #ffe566, #20f0e0);
 }
 
 .bonus-straight-flush .bonus-kind {
-  background: linear-gradient(120deg, var(--accent-2), var(--accent));
+  background: linear-gradient(120deg, #20f0e0, #ffe566);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
-.bonus-pair,
-.bonus-two-pair,
-.bonus-trips,
-.bonus-full-house,
-.bonus-quads {
-  background: rgba(45, 38, 12, 0.92);
-  border: 2px solid #e8c35a;
-  color: #ffe08a;
-  box-shadow: 0 0 28px rgba(232, 195, 90, 0.45);
-}
-
-.bonus-pair .bonus-ring,
-.bonus-two-pair .bonus-ring,
-.bonus-trips .bonus-ring,
-.bonus-full-house .bonus-ring,
-.bonus-quads .bonus-ring {
-  background: conic-gradient(from 0deg, transparent, #e8c35a, transparent);
-}
-
 .bonus-royal {
-  background: rgba(30, 28, 20, 0.94);
+  background: rgba(36, 30, 12, 0.95);
   border: 2px solid transparent;
   background-image:
-    linear-gradient(rgba(30, 28, 20, 0.94), rgba(30, 28, 20, 0.94)),
-    linear-gradient(120deg, #ffe08a, var(--accent-2), var(--accent));
+    linear-gradient(rgba(36, 30, 12, 0.95), rgba(36, 30, 12, 0.95)),
+    linear-gradient(120deg, #fff8d6, #ffd65a, #20f0e0);
   background-origin: border-box;
   background-clip: padding-box, border-box;
-  color: #fff;
+  color: #fff8d6;
   box-shadow:
-    0 0 28px rgba(255, 224, 138, 0.55),
-    0 0 28px rgba(126, 200, 227, 0.45);
+    0 0 34px rgba(255, 248, 214, 0.8),
+    0 0 28px rgba(255, 214, 90, 0.55);
 }
 
 .bonus-royal .bonus-ring {
-  background: conic-gradient(from 0deg, #ffe08a, var(--accent-2), var(--accent), #ffe08a);
+  background: conic-gradient(from 0deg, #fff8d6, #ffd65a, #20f0e0, #fff8d6);
 }
 
 /* —— Mobile —— */
@@ -1038,7 +1123,7 @@ body {
 }
 
 .app-shell.mobile .table {
-  height: calc(var(--card-h) + 5.5rem);
+  height: calc(var(--card-h) + 5.5rem + var(--hand-lift, 16px));
   border-radius: 14px;
   padding: 0.45rem 0.45rem 0.7rem;
 }

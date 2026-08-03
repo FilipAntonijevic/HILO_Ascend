@@ -1,9 +1,9 @@
-import { isRed, rankLabel, suitSymbol, type Card } from '../api';
+import { isRed, rankLabel, suitSymbol, type BonusKind, type Card } from '../api';
 
 interface PlayingCardProps {
   card: Card;
   index: number;
-  highlight?: 'straight' | 'flush' | 'straightFlush' | 'pair' | null;
+  highlight?: BonusKind | null;
 }
 
 type PipSlot = { x: number; y: number; flip?: boolean };

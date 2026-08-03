@@ -84,6 +84,12 @@ export default function App() {
       setFlashBonuses(next.lastBonuses);
       window.setTimeout(() => sfx.bonus(), animateCard ? 220 : 40);
     }
+
+    // Full-board clear (last card survived) — special win, after flip / bonus.
+    if (next.phase === 'MaxReached') {
+      const delay = next.lastBonuses?.length ? (animateCard ? 520 : 200) : animateCard ? 320 : 80;
+      window.setTimeout(() => sfx.maxWin(), delay);
+    }
   }
 
   async function commitBalance() {
@@ -179,7 +185,6 @@ export default function App() {
           pendingSlot={pendingSlot}
           showNextSlot={showNextSlot}
         />
-        {state?.message && inRound && <p className="table-msg">{state.message}</p>}
         {error && <p className="error-msg">{error}</p>}
       </section>
 
@@ -237,10 +242,6 @@ export default function App() {
             </button>
           </div>
         )}
-
-        {(state?.phase === 'Lost' || state?.phase === 'Won' || state?.phase === 'MaxReached' || state?.phase === 'Idle') &&
-          !inRound &&
-          state?.message && <p className="hint-msg">{state.message}</p>}
       </footer>
     </div>
   );
